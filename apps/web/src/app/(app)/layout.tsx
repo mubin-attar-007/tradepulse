@@ -8,7 +8,7 @@ const NAV: { label: string; href?: string }[] = [
   { label: "Markets", href: "/markets" },
   { label: "Strategies" },
   { label: "Backtests" },
-  { label: "Paper Trading" },
+  { label: "Paper Trading", href: "/paper" },
   { label: "Portfolio" },
 ];
 

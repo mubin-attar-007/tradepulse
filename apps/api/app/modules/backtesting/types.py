@@ -6,6 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,6 +55,7 @@ class BacktestResult:
     metrics: dict[str, float]
     total_commission: Decimal
     bars: int
+    open_position: dict[str, Any] | None = None  # set when run with close_at_end=False (paper)
     spec_hash: str = ""
     engine_version: str = ""
     data_fingerprint: str = ""

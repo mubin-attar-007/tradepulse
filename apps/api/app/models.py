@@ -14,3 +14,4 @@ from app.modules.market_data.models import (  # noqa: F401
     InstrumentSource,
 )
 from app.modules.strategies.models import Strategy, StrategyVersion  # noqa: F401
+from app.modules.trading.models import PaperSession  # noqa: F401
