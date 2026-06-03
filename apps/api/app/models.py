@@ -8,3 +8,8 @@ from __future__ import annotations
 
 from app.modules.audit.models import AuditLog  # noqa: F401
 from app.modules.auth.models import BrokerConnection, User, UserCredential  # noqa: F401
+from app.modules.market_data.models import (  # noqa: F401
+    OHLCV,
+    Instrument,
+    InstrumentSource,
+)
