@@ -1,0 +1,121 @@
+# Production stack on a single VPS. Run from repo root:
+#   docker compose -f infra/compose.prod.yaml --env-file infra/.env.prod up -d
+# Observability is opt-in:  ... --profile observability up -d
+name: trading-platform
+
+services:
+  db:
+    image: timescale/timescaledb:2.17.2-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: { context: .., dockerfile: infra/Dockerfile.api }
+    image: trading-platform-api:latest
+    restart: unless-stopped
+    env_file: .env.prod
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  worker:
+    image: trading-platform-api:latest
+    restart: unless-stopped
+    command: ["arq", "app.worker.WorkerSettings"]
+    env_file: .env.prod
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  web:
+    build: { context: ../apps/web, dockerfile: ../../infra/Dockerfile.web }
+    image: trading-platform-web:latest
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_BASE: /api
+      NEXT_PUBLIC_WS_URL: wss://${DOMAIN}/api/market/ws
+      API_PROXY_TARGET: http://api:8000
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web, api]
+
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: ["observability"]
+    restart: unless-stopped
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=15d"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
+  loki:
+    image: grafana/loki:latest
+    profiles: ["observability"]
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/config.yaml"]
+    volumes:
+      - ./loki-config.yaml:/etc/loki/config.yaml:ro
+      - loki_data:/loki
+
+  promtail:
+    image: grafana/promtail:latest
+    profiles: ["observability"]
+    restart: unless-stopped
+    command: ["-config.file=/etc/promtail/config.yaml"]
+    volumes:
+      - ./promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on: [loki]
+
+  grafana:
+    image: grafana/grafana:latest
+    profiles: ["observability"]
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on: [prometheus, loki]
+
+volumes:
+  pgdata:
+  redisdata:
+  caddy_data:
+  caddy_config:
+  prometheus_data:
+  loki_data:
+  grafana_data:

@@ -45,6 +45,7 @@ class Settings(BaseSettings):
 
     # --- Observability ---
     sentry_dsn: str = ""
+    metrics_enabled: bool = True
 
     # --- AI (Phase 6) ---
     anthropic_api_key: str = ""

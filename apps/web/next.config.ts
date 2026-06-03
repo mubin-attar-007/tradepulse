@@ -6,6 +6,7 @@ import type { NextConfig } from "next";
 const API_TARGET = process.env.API_PROXY_TARGET ?? "http://localhost:8080";
 
 const nextConfig: NextConfig = {
+  output: "standalone", // self-contained server bundle for the production Docker image
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${API_TARGET}/:path*` }];
   },
