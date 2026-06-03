@@ -168,9 +168,7 @@ async def get_bars(
         ORDER BY bucket
         """
     )
-    result = await session.execute(
-        query, {"iid": instrument_id, "start": start, "end": end}
-    )
+    result = await session.execute(query, {"iid": instrument_id, "start": start, "end": end})
     return [
         BarPoint(row.bucket, row.open, row.high, row.low, row.close, row.volume) for row in result
     ]

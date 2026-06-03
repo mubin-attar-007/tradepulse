@@ -30,6 +30,10 @@ migrate:
     uv run alembic upgrade head
 makemigration message:
     uv run alembic revision --autogenerate -m "{{message}}"
+seed:
+    uv run python -m app.cli.seed
+backfill symbol days="2":
+    uv run python -m app.cli.backfill {{symbol}} --days {{days}}
 openapi:
     uv run python -m app.cli.export_openapi
 
