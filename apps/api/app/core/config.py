@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     ollama_base_url: str = "http://localhost:11434"
 
+    # --- Market data / brokers ---
+    alpaca_api_key: str = ""
+    alpaca_api_secret: str = ""
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.cors_allow_origins.split(",") if o.strip()]
