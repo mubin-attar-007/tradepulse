@@ -106,6 +106,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/market/instruments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Instruments */
+        get: operations["list_instruments_market_instruments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/market/instruments/{instrument_id}/bars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Instrument Bars */
+        get: operations["get_instrument_bars_market_instruments__instrument_id__bars_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/market/instruments/{instrument_id}/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Latest Quote */
+        get: operations["latest_quote_market_instruments__instrument_id__latest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/market/ws-ticket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Ws Ticket */
+        post: operations["create_ws_ticket_market_ws_ticket_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ready": {
         parameters: {
             query?: never;
@@ -127,10 +195,48 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** BarOut */
+        BarOut: {
+            /** Close */
+            close: string;
+            /** High */
+            high: string;
+            /** Low */
+            low: string;
+            /** Open */
+            open: string;
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /** Volume */
+            volume: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** InstrumentOut */
+        InstrumentOut: {
+            /** Asset Class */
+            asset_class: string;
+            /** Calendar */
+            calendar: string;
+            /** Exchange */
+            exchange: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string | null;
+            /** Quote Currency */
+            quote_currency: string;
+            /** Symbol */
+            symbol: string;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -141,6 +247,16 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** QuoteOut */
+        QuoteOut: {
+            /**
+             * Instrument Id
+             * Format: uuid
+             */
+            instrument_id: string;
+            /** Price */
+            price: string;
         };
         /** RegisterRequest */
         RegisterRequest: {
@@ -186,6 +302,13 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** WsTicketOut */
+        WsTicketOut: {
+            /** Expires In */
+            expires_in: number;
+            /** Ticket */
+            ticket: string;
         };
     };
     responses: never;
@@ -344,6 +467,123 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    list_instruments_market_instruments_get: {
+        parameters: {
+            query?: {
+                asset_class?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstrumentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_instrument_bars_market_instruments__instrument_id__bars_get: {
+        parameters: {
+            query?: {
+                timeframe?: string;
+                start?: string | null;
+                end?: string | null;
+            };
+            header?: never;
+            path: {
+                instrument_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BarOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    latest_quote_market_instruments__instrument_id__latest_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instrument_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_ws_ticket_market_ws_ticket_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WsTicketOut"];
                 };
             };
         };

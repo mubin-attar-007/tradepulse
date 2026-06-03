@@ -1,6 +1,45 @@
 {
   "components": {
     "schemas": {
+      "BarOut": {
+        "properties": {
+          "close": {
+            "title": "Close",
+            "type": "string"
+          },
+          "high": {
+            "title": "High",
+            "type": "string"
+          },
+          "low": {
+            "title": "Low",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "volume": {
+            "title": "Volume",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ts",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume"
+        ],
+        "title": "BarOut",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -12,6 +51,64 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "InstrumentOut": {
+        "properties": {
+          "asset_class": {
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "calendar": {
+            "title": "Calendar",
+            "type": "string"
+          },
+          "exchange": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "quote_currency": {
+            "title": "Quote Currency",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "symbol",
+          "asset_class",
+          "name",
+          "exchange",
+          "quote_currency",
+          "calendar"
+        ],
+        "title": "InstrumentOut",
         "type": "object"
       },
       "LoginRequest": {
@@ -33,6 +130,25 @@
           "password"
         ],
         "title": "LoginRequest",
+        "type": "object"
+      },
+      "QuoteOut": {
+        "properties": {
+          "instrument_id": {
+            "format": "uuid",
+            "title": "Instrument Id",
+            "type": "string"
+          },
+          "price": {
+            "title": "Price",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument_id",
+          "price"
+        ],
+        "title": "QuoteOut",
         "type": "object"
       },
       "RegisterRequest": {
@@ -144,6 +260,24 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WsTicketOut": {
+        "properties": {
+          "expires_in": {
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "ticket": {
+            "title": "Ticket",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticket",
+          "expires_in"
+        ],
+        "title": "WsTicketOut",
         "type": "object"
       }
     }
@@ -329,6 +463,214 @@
         "summary": "Liveness probe",
         "tags": [
           "system"
+        ]
+      }
+    },
+    "/market/instruments": {
+      "get": {
+        "operationId": "list_instruments_market_instruments_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "asset_class",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Asset Class"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InstrumentOut"
+                  },
+                  "title": "Response List Instruments Market Instruments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Instruments",
+        "tags": [
+          "market-data"
+        ]
+      }
+    },
+    "/market/instruments/{instrument_id}/bars": {
+      "get": {
+        "operationId": "get_instrument_bars_market_instruments__instrument_id__bars_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "instrument_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Instrument Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1m",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BarOut"
+                  },
+                  "title": "Response Get Instrument Bars Market Instruments  Instrument Id  Bars Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Instrument Bars",
+        "tags": [
+          "market-data"
+        ]
+      }
+    },
+    "/market/instruments/{instrument_id}/latest": {
+      "get": {
+        "operationId": "latest_quote_market_instruments__instrument_id__latest_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "instrument_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Instrument Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Latest Quote",
+        "tags": [
+          "market-data"
+        ]
+      }
+    },
+    "/market/ws-ticket": {
+      "post": {
+        "operationId": "create_ws_ticket_market_ws_ticket_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WsTicketOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Create Ws Ticket",
+        "tags": [
+          "market-data"
         ]
       }
     },

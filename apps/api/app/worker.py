@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
+from arq import cron
 from arq.connections import RedisSettings
 
 from app.core.config import get_settings
@@ -60,6 +61,17 @@ async def ingest_backfill(
             await close()
 
 
+async def poll_quotes(_ctx: dict[str, Any]) -> int:
+    """Cron: fetch latest closed bars for active instruments and publish them
+    to Redis for live WS fan-out (crypto always; equities during market hours)."""
+    from app.core.db import get_sessionmaker
+    from app.core.redis import get_redis_client
+    from app.modules.market_data.streaming import poll_and_publish
+
+    async with get_sessionmaker()() as session:
+        return await poll_and_publish(session, get_redis_client(), get_settings())
+
+
 async def _on_startup(_ctx: dict[str, Any]) -> None:
     configure_logging()
     logger.info("worker_startup")
@@ -74,5 +86,7 @@ class WorkerSettings:
     on_startup = staticmethod(_on_startup)
     on_shutdown = staticmethod(_on_shutdown)
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
-    # Cron jobs (market-hours-aware ingestion, gap-fill sweep) land in Phase 2.
-    cron_jobs: ClassVar[list[Any]] = []
+    # Poll + publish live quotes twice a minute (market-hours-aware inside).
+    cron_jobs: ClassVar[list[Any]] = [
+        cron(poll_quotes, second={0, 30})  # type: ignore[arg-type]
+    ]
