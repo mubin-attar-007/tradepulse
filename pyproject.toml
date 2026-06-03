@@ -101,11 +101,13 @@ branch = true
 root_package = "app"
 
 [[tool.importlinter.contracts]]
-name = "Layered architecture (core < audit < auth < domain < ai)"
+name = "Layered architecture (core < audit < auth < data/strategies < backtesting < trading < ai)"
 type = "layers"
 layers = [
     "app.modules.ai",
-    "app.modules.trading | app.modules.strategies | app.modules.market_data",
+    "app.modules.trading",
+    "app.modules.backtesting",
+    "app.modules.strategies | app.modules.market_data",
     "app.modules.auth",
     "app.modules.audit",
     "app.core",
