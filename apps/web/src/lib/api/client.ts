@@ -6,6 +6,9 @@
 import type { components } from "./schema";
 
 export type User = components["schemas"]["UserOut"];
+export type Instrument = components["schemas"]["InstrumentOut"];
+export type Bar = components["schemas"]["BarOut"];
+export type Quote = components["schemas"]["QuoteOut"];
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 const UNSAFE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -61,4 +64,19 @@ export const api = {
       body: JSON.stringify({ email, password, display_name }),
     }),
   logout: () => apiFetch<{ status: string }>("/auth/logout", { method: "POST" }),
+
+  instruments: (assetClass?: string) =>
+    apiFetch<Instrument[]>(
+      `/market/instruments${assetClass ? `?asset_class=${assetClass}` : ""}`,
+    ),
+  bars: (id: string, timeframe: string, start?: string, end?: string) => {
+    const params = new URLSearchParams({ timeframe });
+    if (start) params.set("start", start);
+    if (end) params.set("end", end);
+    return apiFetch<Bar[]>(`/market/instruments/${id}/bars?${params.toString()}`);
+  },
+  latest: (id: string) => apiFetch<Quote>(`/market/instruments/${id}/latest`),
+  wsTicket: () =>
+    apiFetch<{ ticket: string; expires_in: number }>("/market/ws-ticket", { method: "POST" }),
 };
+

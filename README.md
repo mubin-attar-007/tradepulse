@@ -15,7 +15,7 @@ A production-grade, personal-first (SaaS-ready) platform for **US equities + cry
 ```bash
 cp .env.example .env          # then fill secrets (see comments in the file)
 just bootstrap                # uv sync + docker up + migrate
-just api                      # FastAPI at http://localhost:8000  (/docs, /health)
+just api                      # FastAPI at http://localhost:8080  (/docs, /health)
 just web                      # Next.js at http://localhost:3000   (later phases)
 ```
 

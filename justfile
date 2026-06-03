@@ -23,7 +23,7 @@ logs:
 
 # --- Backend ---
 api:
-    uv run uvicorn app.main:app --reload --app-dir apps/api --host 0.0.0.0 --port 8000
+    uv run uvicorn app.main:app --reload --app-dir apps/api --host 0.0.0.0 --port 8080
 worker:
     uv run arq app.worker.WorkerSettings
 migrate:
