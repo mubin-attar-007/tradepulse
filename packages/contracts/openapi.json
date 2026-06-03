@@ -240,6 +240,70 @@
         "title": "ExitRule",
         "type": "object"
       },
+      "ExplainRequest": {
+        "properties": {
+          "context": {
+            "additionalProperties": true,
+            "title": "Context",
+            "type": "object"
+          }
+        },
+        "required": [
+          "context"
+        ],
+        "title": "ExplainRequest",
+        "type": "object"
+      },
+      "ExplainResponse": {
+        "properties": {
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "provider"
+        ],
+        "title": "ExplainResponse",
+        "type": "object"
+      },
+      "GenerateStrategyRequest": {
+        "properties": {
+          "prompt": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "title": "GenerateStrategyRequest",
+        "type": "object"
+      },
+      "GenerateStrategyResponse": {
+        "properties": {
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/StrategySpec-Output"
+          }
+        },
+        "required": [
+          "spec",
+          "provider"
+        ],
+        "title": "GenerateStrategyResponse",
+        "type": "object"
+      },
       "Group-Input": {
         "additionalProperties": false,
         "properties": {
@@ -1154,6 +1218,88 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/ai/explain": {
+      "post": {
+        "operationId": "explain_backtest_ai_explain_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExplainRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExplainResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Explain Backtest",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/ai/strategy": {
+      "post": {
+        "operationId": "generate_strategy_ai_strategy_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateStrategyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateStrategyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Strategy",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
     "/auth/csrf": {
       "get": {
         "operationId": "issue_csrf_auth_csrf_get",
