@@ -26,6 +26,7 @@ from app.core.security import SecurityHeadersMiddleware
 from app.modules.auth.router import router as auth_router
 from app.modules.market_data.realtime import close_hub
 from app.modules.market_data.router import router as market_router
+from app.modules.strategies.router import router as strategies_router
 
 logger = get_logger("app")
 
@@ -93,6 +94,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth_router)
     app.include_router(market_router)
+    app.include_router(strategies_router)
     return app
 
 

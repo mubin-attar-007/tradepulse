@@ -29,7 +29,8 @@ from app.core.config import get_settings
 get_settings.cache_clear()
 
 _TABLES = (
-    "users, user_credentials, broker_connections, audit_log, ohlcv, instrument_sources, instruments"
+    "users, user_credentials, broker_connections, audit_log, ohlcv, "
+    "instrument_sources, instruments, strategy_versions, strategies"
 )
 
 
