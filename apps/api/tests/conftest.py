@@ -30,7 +30,7 @@ get_settings.cache_clear()
 
 _TABLES = (
     "users, user_credentials, broker_connections, audit_log, ohlcv, "
-    "instrument_sources, instruments, paper_sessions, strategy_versions, strategies"
+    "instrument_sources, instruments, paper_sessions, backtests, strategy_versions, strategies"
 )
 
 
