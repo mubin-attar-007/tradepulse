@@ -7,7 +7,6 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import BadRequestError, NotFoundError
 from app.core.logging import get_logger
 from app.modules.backtesting import engine
-from app.modules.backtesting.types import BacktestResult, ExecutionConfig
+from app.modules.backtesting.snapshot import result_to_dict
+from app.modules.backtesting.types import ExecutionConfig
 from app.modules.market_data import repository as md_repo
 from app.modules.market_data.models import Instrument
 from app.modules.strategies.repository import StrategyRepository, StrategyVersionRepository
@@ -25,39 +25,6 @@ from app.modules.trading.repository import PaperSessionRepository
 
 logger = get_logger("paper")
 DEFAULT_CASH = Decimal("100000")
-
-
-def build_snapshot(result: BacktestResult, as_of: datetime) -> dict[str, Any]:
-    return {
-        "as_of": as_of.isoformat(),
-        "initial_cash": str(result.initial_cash),
-        "final_equity": str(result.final_equity),
-        "open_position": result.open_position,
-        "num_trades": len(result.trades),
-        "total_commission": str(result.total_commission),
-        "metrics": result.metrics,
-        "risk_events": [
-            {"ts": e.ts.isoformat(), "kind": e.kind, "detail": e.detail} for e in result.risk_events
-        ],
-        "trades": [
-            {
-                "entry_ts": t.entry_ts.isoformat(),
-                "exit_ts": t.exit_ts.isoformat(),
-                "side": t.side,
-                "qty": str(t.qty),
-                "entry_price": str(t.entry_price),
-                "exit_price": str(t.exit_price),
-                "pnl": str(t.pnl),
-                "return_pct": t.return_pct,
-                "exit_reason": t.exit_reason,
-            }
-            for t in result.trades[-50:]
-        ],
-        "equity_curve": [
-            {"ts": p.ts.isoformat(), "equity": str(p.equity)} for p in result.equity_curve[-300:]
-        ],
-        "bars": result.bars,
-    }
 
 
 class PaperService:
@@ -113,7 +80,7 @@ class PaperService:
                 ExecutionConfig(initial_cash=Decimal(paper.initial_cash)),
                 close_at_end=False,
             )
-            paper.snapshot = build_snapshot(result, end)
+            paper.snapshot = result_to_dict(result, as_of=end)
         paper.last_run_at = end
         await self.session.flush()
         return paper

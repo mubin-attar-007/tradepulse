@@ -10,6 +10,9 @@ export type Instrument = components["schemas"]["InstrumentOut"];
 export type Bar = components["schemas"]["BarOut"];
 export type Quote = components["schemas"]["QuoteOut"];
 export type PaperSession = components["schemas"]["PaperSessionOut"];
+export type Strategy = components["schemas"]["StrategyOut"];
+export type BacktestSummary = components["schemas"]["BacktestSummaryOut"];
+export type Backtest = components["schemas"]["BacktestOut"];
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 const UNSAFE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -81,6 +84,21 @@ export const api = {
     apiFetch<{ ticket: string; expires_in: number }>("/market/ws-ticket", { method: "POST" }),
 
   paperSessions: () => apiFetch<PaperSession[]>("/paper/sessions"),
+
+  strategies: () => apiFetch<Strategy[]>("/strategies"),
+  backtests: () => apiFetch<BacktestSummary[]>("/backtests"),
+  backtest: (id: string) => apiFetch<Backtest>(`/backtests/${id}`),
+  createBacktest: (strategyId: string, start: string, end: string) =>
+    apiFetch<Backtest>("/backtests", {
+      method: "POST",
+      body: JSON.stringify({ strategy_id: strategyId, start, end }),
+    }),
+  aiExplain: (context: Record<string, unknown>) =>
+    apiFetch<{ text: string; provider: string }>("/ai/explain", {
+      method: "POST",
+      body: JSON.stringify({ context }),
+    }),
 };
+
 
 
