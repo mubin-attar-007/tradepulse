@@ -1,41 +1,101 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Sparkles } from "lucide-react";
+import Link from "next/link";
+import type { ReactNode } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api/client";
 
-function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-5">
+    <Card className="p-5 hover:border-primary/30">
       <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="mt-2 text-2xl font-semibold tabular-nums">{value}</div>
       {hint ? <div className="mt-1 text-xs text-muted-foreground">{hint}</div> : null}
-    </div>
+    </Card>
   );
 }
 
 export default function DashboardPage() {
-  const { data: user, isLoading } = useQuery({ queryKey: ["me"], queryFn: api.me });
+  const me = useQuery({ queryKey: ["me"], queryFn: api.me });
+  const strategies = useQuery({ queryKey: ["strategies"], queryFn: () => api.strategies() });
+  const backtests = useQuery({ queryKey: ["backtests"], queryFn: () => api.backtests() });
+  const paper = useQuery({ queryKey: ["paper-sessions"], queryFn: () => api.paperSessions() });
+  const instruments = useQuery({ queryKey: ["instruments"], queryFn: () => api.instruments() });
+
+  const running = paper.data?.filter((s) => s.status === "running").length;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          {isLoading
-            ? "Loading…"
-            : `Welcome${user?.display_name ? `, ${user.display_name}` : ""}.`}
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Welcome back{me.data?.display_name ? `, ${me.data.display_name}` : ""}
+        </h1>
+        <p className="text-sm text-muted-foreground">Your market intelligence at a glance.</p>
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Portfolio Value" value="$0.00" hint="Paper · no positions yet" />
-        <StatCard label="Open Positions" value="0" />
-        <StatCard label="Strategies" value="0" hint="Builder arrives in Phase 4" />
-        <StatCard label="Backtests" value="0" hint="Engine arrives in Phase 5" />
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Stat label="Portfolio Value" value="$0.00" hint="Paper · no positions yet" />
+        <Stat label="Strategies" value={strategies.data?.length ?? "—"} hint="canonical specs" />
+        <Stat label="Backtests" value={backtests.data?.length ?? "—"} hint="runs stored" />
+        <Stat label="Paper sessions" value={running ?? "—"} hint="running now" />
       </div>
-      <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-        Foundation ready. Market data, charts, the strategy builder, and the honest backtester
-        arrive in the next phases.
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Markets</CardTitle>
+            <Link href="/markets" className="text-xs text-primary hover:underline">
+              View all
+            </Link>
+          </CardHeader>
+          <CardContent className="pt-3">
+            {instruments.isLoading ? (
+              <Skeleton className="h-40 w-full" />
+            ) : (
+              <div className="divide-y divide-border">
+                {(instruments.data ?? []).slice(0, 6).map((i) => (
+                  <Link
+                    key={i.id}
+                    href={`/chart/${i.id}`}
+                    className="grid grid-cols-[5rem_1fr_auto] items-center gap-3 py-2.5 text-sm transition-colors hover:text-primary"
+                  >
+                    <span className="font-medium tabular-nums">{i.symbol}</span>
+                    <span className="truncate text-muted-foreground">{i.name}</span>
+                    <Badge variant={i.asset_class === "crypto" ? "accent" : "default"}>
+                      {i.asset_class}
+                    </Badge>
+                  </Link>
+                ))}
+                {!instruments.data?.length ? (
+                  <p className="py-3 text-sm text-muted-foreground">
+                    No instruments seeded yet — run <code>just seed</code>.
+                  </p>
+                ) : null}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>AI Insights</CardTitle>
+            <Sparkles size={15} className="text-primary" />
+          </CardHeader>
+          <CardContent className="space-y-3 pt-3 text-sm text-muted-foreground">
+            <p>
+              Ask the assistant to draft a strategy, explain a backtest, or summarize a market —
+              grounded in your data, never financial advice.
+            </p>
+            <Link href="/strategies" className="inline-block text-xs text-primary hover:underline">
+              Generate a strategy with AI →
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
