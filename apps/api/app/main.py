@@ -72,6 +72,11 @@ def create_app() -> FastAPI:
         expose_headers=["X-Request-ID"],
     )
 
+    if settings.metrics_enabled:
+        from prometheus_fastapi_instrumentator import Instrumentator
+
+        Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+
     @app.get("/health", tags=["system"], summary="Liveness probe")
     async def health() -> dict[str, str]:
         return {"status": "ok", "env": settings.app_env}

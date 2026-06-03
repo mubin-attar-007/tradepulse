@@ -19,6 +19,7 @@ os.environ.setdefault(
 )
 os.environ.setdefault("REDIS_URL", "redis://localhost:56379/1")
 os.environ["RATE_LIMIT_PER_MINUTE"] = "1000000"  # don't throttle tests
+os.environ["METRICS_ENABLED"] = "false"  # avoid duplicate Prometheus collectors per app
 # Dev-only 32-byte key (base64) for broker-credential encryption tests.
 os.environ.setdefault("BROKER_CRED_KEY", base64.b64encode(b"0" * 32).decode())
 

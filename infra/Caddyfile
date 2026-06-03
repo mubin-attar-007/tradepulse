@@ -1,0 +1,20 @@
+# Auto-TLS reverse proxy. /api/* (incl. the WebSocket upgrade at /api/market/ws)
+# goes to the API with the /api prefix stripped; everything else to the web app.
+{$DOMAIN} {
+	encode gzip zstd
+
+	handle /api/* {
+		uri strip_prefix /api
+		reverse_proxy api:8000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
