@@ -6,7 +6,7 @@ import { UserMenu } from "@/components/user-menu";
 const NAV: { label: string; href?: string }[] = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Markets", href: "/markets" },
-  { label: "Strategies" },
+  { label: "Strategies", href: "/strategies" },
   { label: "Backtests", href: "/backtests" },
   { label: "Paper Trading", href: "/paper" },
   { label: "Portfolio" },

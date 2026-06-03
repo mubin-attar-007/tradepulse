@@ -11,6 +11,7 @@ export type Bar = components["schemas"]["BarOut"];
 export type Quote = components["schemas"]["QuoteOut"];
 export type PaperSession = components["schemas"]["PaperSessionOut"];
 export type Strategy = components["schemas"]["StrategyOut"];
+export type StrategyDetail = components["schemas"]["StrategyDetailOut"];
 export type BacktestSummary = components["schemas"]["BacktestSummaryOut"];
 export type Backtest = components["schemas"]["BacktestOut"];
 
@@ -86,6 +87,18 @@ export const api = {
   paperSessions: () => apiFetch<PaperSession[]>("/paper/sessions"),
 
   strategies: () => apiFetch<Strategy[]>("/strategies"),
+  createStrategy: (spec: unknown) =>
+    apiFetch<StrategyDetail>("/strategies", { method: "POST", body: JSON.stringify(spec) }),
+  aiStrategy: (prompt: string) =>
+    apiFetch<{ spec: unknown; provider: string }>("/ai/strategy", {
+      method: "POST",
+      body: JSON.stringify({ prompt }),
+    }),
+  deployPaper: (strategyId: string) =>
+    apiFetch<PaperSession>("/paper/deploy", {
+      method: "POST",
+      body: JSON.stringify({ strategy_id: strategyId }),
+    }),
   backtests: () => apiFetch<BacktestSummary[]>("/backtests"),
   backtest: (id: string) => apiFetch<Backtest>(`/backtests/${id}`),
   createBacktest: (strategyId: string, start: string, end: string) =>
