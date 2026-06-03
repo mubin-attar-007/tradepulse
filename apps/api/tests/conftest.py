@@ -28,7 +28,9 @@ from app.core.config import get_settings
 
 get_settings.cache_clear()
 
-_TABLES = "users, user_credentials, broker_connections, audit_log"
+_TABLES = (
+    "users, user_credentials, broker_connections, audit_log, ohlcv, instrument_sources, instruments"
+)
 
 
 async def _create_test_db_and_schema() -> None:
@@ -47,6 +49,8 @@ async def _create_test_db_and_schema() -> None:
 
     engine = create_async_engine(settings.database_url)
     async with engine.begin() as connection:
+        # time_bucket / first / last used by the bar reads require the extension.
+        await connection.execute(text("CREATE EXTENSION IF NOT EXISTS timescaledb"))
         await connection.run_sync(Base.metadata.create_all)
     await engine.dispose()
 
