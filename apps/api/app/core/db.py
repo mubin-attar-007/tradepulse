@@ -33,6 +33,9 @@ NAMING_CONVENTION = {
 
 class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
+    # Fetch server-generated defaults (created_at/updated_at) via RETURNING on
+    # INSERT so they're populated without a sync lazy-load (avoids MissingGreenlet).
+    __mapper_args__ = {"eager_defaults": True}  # noqa: RUF012  (SQLAlchemy config dunder)
 
 
 class UUIDPrimaryKey:

@@ -35,8 +35,13 @@ _TIMESCALE_SCHEMAS = {
 }
 
 
-def include_object(obj: Any, _name: str, type_: str, _reflected: bool, _compare_to: Any) -> bool:
-    return not (type_ == "table" and getattr(obj, "schema", None) in _TIMESCALE_SCHEMAS)
+def include_object(obj: Any, name: str, type_: str, _reflected: bool, _compare_to: Any) -> bool:
+    # Exclude TimescaleDB-managed objects: internal schemas, and the
+    # auto-created `<table>_<timecol>_idx` hypertable index.
+    return not (
+        (type_ == "table" and getattr(obj, "schema", None) in _TIMESCALE_SCHEMAS)
+        or (type_ == "index" and name is not None and name.endswith("_ts_idx"))
+    )
 
 
 def _do_migrations(connection: Connection) -> None:

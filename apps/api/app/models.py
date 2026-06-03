@@ -13,3 +13,4 @@ from app.modules.market_data.models import (  # noqa: F401
     Instrument,
     InstrumentSource,
 )
+from app.modules.strategies.models import Strategy, StrategyVersion  # noqa: F401

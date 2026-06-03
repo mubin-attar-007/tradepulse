@@ -40,6 +40,300 @@
         "title": "BarOut",
         "type": "object"
       },
+      "Comparison": {
+        "additionalProperties": false,
+        "properties": {
+          "left": {
+            "$ref": "#/components/schemas/Operand"
+          },
+          "op": {
+            "enum": [
+              ">",
+              "<",
+              ">=",
+              "<=",
+              "cross_above",
+              "cross_below"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "right": {
+            "$ref": "#/components/schemas/Operand"
+          },
+          "type": {
+            "const": "compare",
+            "default": "compare",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "left",
+          "op",
+          "right"
+        ],
+        "title": "Comparison",
+        "type": "object"
+      },
+      "ExitRule-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "exit_conditions": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "compare": "#/components/schemas/Comparison",
+                    "group": "#/components/schemas/Group-Input"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Comparison"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Group-Input"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Conditions"
+          },
+          "stop_loss_pct": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss Pct"
+          },
+          "take_profit_pct": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Take Profit Pct"
+          },
+          "time_exit_bars": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Exit Bars"
+          },
+          "trailing_stop_pct": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trailing Stop Pct"
+          }
+        },
+        "title": "ExitRule",
+        "type": "object"
+      },
+      "ExitRule-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "exit_conditions": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "compare": "#/components/schemas/Comparison",
+                    "group": "#/components/schemas/Group-Output"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Comparison"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Group-Output"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Conditions"
+          },
+          "stop_loss_pct": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Loss Pct"
+          },
+          "take_profit_pct": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Take Profit Pct"
+          },
+          "time_exit_bars": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Exit Bars"
+          },
+          "trailing_stop_pct": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trailing Stop Pct"
+          }
+        },
+        "title": "ExitRule",
+        "type": "object"
+      },
+      "Group-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "conditions": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "compare": "#/components/schemas/Comparison",
+                  "group": "#/components/schemas/Group-Input"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Comparison"
+                },
+                {
+                  "$ref": "#/components/schemas/Group-Input"
+                }
+              ]
+            },
+            "minItems": 1,
+            "title": "Conditions",
+            "type": "array"
+          },
+          "logic": {
+            "enum": [
+              "all",
+              "any"
+            ],
+            "title": "Logic",
+            "type": "string"
+          },
+          "type": {
+            "const": "group",
+            "default": "group",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "logic",
+          "conditions"
+        ],
+        "title": "Group",
+        "type": "object"
+      },
+      "Group-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "conditions": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "compare": "#/components/schemas/Comparison",
+                  "group": "#/components/schemas/Group-Output"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Comparison"
+                },
+                {
+                  "$ref": "#/components/schemas/Group-Output"
+                }
+              ]
+            },
+            "minItems": 1,
+            "title": "Conditions",
+            "type": "array"
+          },
+          "logic": {
+            "enum": [
+              "all",
+              "any"
+            ],
+            "title": "Logic",
+            "type": "string"
+          },
+          "type": {
+            "const": "group",
+            "default": "group",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "logic",
+          "conditions"
+        ],
+        "title": "Group",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -51,6 +345,45 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "IndicatorSpec": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "maxLength": 40,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
+            "title": "Id",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Params",
+            "type": "object"
+          },
+          "type": {
+            "enum": [
+              "EMA",
+              "SMA",
+              "RSI",
+              "ATR",
+              "BBANDS",
+              "MACD",
+              "VWAP",
+              "VOL_SMA"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type"
+        ],
+        "title": "IndicatorSpec",
         "type": "object"
       },
       "InstrumentOut": {
@@ -132,6 +465,123 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "Operand": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "anyOf": [
+              {
+                "enum": [
+                  "open",
+                  "high",
+                  "low",
+                  "close",
+                  "volume"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "kind": {
+            "enum": [
+              "price",
+              "indicator",
+              "const"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "multiplier": {
+            "default": 1.0,
+            "title": "Multiplier",
+            "type": "number"
+          },
+          "offset": {
+            "default": 0.0,
+            "title": "Offset",
+            "type": "number"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "Operand",
+        "type": "object"
+      },
+      "PositionSizing": {
+        "additionalProperties": false,
+        "properties": {
+          "atr_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atr Ref"
+          },
+          "method": {
+            "enum": [
+              "fixed_units",
+              "percent_equity",
+              "risk_per_trade",
+              "atr"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "value": {
+            "exclusiveMinimum": 0.0,
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "method",
+          "value"
+        ],
+        "title": "PositionSizing",
+        "type": "object"
+      },
       "QuoteOut": {
         "properties": {
           "instrument_id": {
@@ -182,6 +632,422 @@
           "password"
         ],
         "title": "RegisterRequest",
+        "type": "object"
+      },
+      "RiskLimits": {
+        "additionalProperties": false,
+        "properties": {
+          "max_consecutive_losses": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Consecutive Losses"
+          },
+          "max_daily_loss_pct": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Daily Loss Pct"
+          },
+          "max_open_positions": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Max Open Positions",
+            "type": "integer"
+          },
+          "max_position_pct": {
+            "default": 1.0,
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "Max Position Pct",
+            "type": "number"
+          }
+        },
+        "title": "RiskLimits",
+        "type": "object"
+      },
+      "StrategyDetailOut": {
+        "properties": {
+          "latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StrategyVersionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/StrategyOut"
+          }
+        },
+        "required": [
+          "strategy",
+          "latest"
+        ],
+        "title": "StrategyDetailOut",
+        "type": "object"
+      },
+      "StrategyOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "latest_version": {
+            "title": "Latest Version",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "latest_version",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "StrategyOut",
+        "type": "object"
+      },
+      "StrategySpec-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "entry_long": {
+            "discriminator": {
+              "mapping": {
+                "compare": "#/components/schemas/Comparison",
+                "group": "#/components/schemas/Group-Input"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Comparison"
+              },
+              {
+                "$ref": "#/components/schemas/Group-Input"
+              }
+            ],
+            "title": "Entry Long"
+          },
+          "entry_short": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "compare": "#/components/schemas/Comparison",
+                    "group": "#/components/schemas/Group-Input"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Comparison"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Group-Input"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Short"
+          },
+          "exit": {
+            "$ref": "#/components/schemas/ExitRule-Input"
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorSpec"
+            },
+            "title": "Indicators",
+            "type": "array"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "risk": {
+            "$ref": "#/components/schemas/RiskLimits"
+          },
+          "sizing": {
+            "$ref": "#/components/schemas/PositionSizing"
+          },
+          "spec_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Spec Version",
+            "type": "string"
+          },
+          "time_of_day": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeOfDayFilter"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "timeframe": {
+            "enum": [
+              "1m",
+              "5m",
+              "15m",
+              "1h",
+              "4h",
+              "1d"
+            ],
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "universe": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Universe",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "universe",
+          "timeframe",
+          "entry_long",
+          "exit",
+          "sizing"
+        ],
+        "title": "StrategySpec",
+        "type": "object"
+      },
+      "StrategySpec-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "entry_long": {
+            "discriminator": {
+              "mapping": {
+                "compare": "#/components/schemas/Comparison",
+                "group": "#/components/schemas/Group-Output"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Comparison"
+              },
+              {
+                "$ref": "#/components/schemas/Group-Output"
+              }
+            ],
+            "title": "Entry Long"
+          },
+          "entry_short": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "compare": "#/components/schemas/Comparison",
+                    "group": "#/components/schemas/Group-Output"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Comparison"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Group-Output"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Short"
+          },
+          "exit": {
+            "$ref": "#/components/schemas/ExitRule-Output"
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorSpec"
+            },
+            "title": "Indicators",
+            "type": "array"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "risk": {
+            "$ref": "#/components/schemas/RiskLimits"
+          },
+          "sizing": {
+            "$ref": "#/components/schemas/PositionSizing"
+          },
+          "spec_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Spec Version",
+            "type": "string"
+          },
+          "time_of_day": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeOfDayFilter"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "timeframe": {
+            "enum": [
+              "1m",
+              "5m",
+              "15m",
+              "1h",
+              "4h",
+              "1d"
+            ],
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "universe": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Universe",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "universe",
+          "timeframe",
+          "entry_long",
+          "exit",
+          "sizing"
+        ],
+        "title": "StrategySpec",
+        "type": "object"
+      },
+      "StrategyVersionOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/StrategySpec-Output"
+          },
+          "spec_hash": {
+            "title": "Spec Hash",
+            "type": "string"
+          },
+          "strategy_id": {
+            "format": "uuid",
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "strategy_id",
+          "version",
+          "spec",
+          "spec_hash",
+          "engine_version",
+          "created_at"
+        ],
+        "title": "StrategyVersionOut",
+        "type": "object"
+      },
+      "TimeOfDayFilter": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "pattern": "^\\d{2}:\\d{2}$",
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "pattern": "^\\d{2}:\\d{2}$",
+            "title": "Start",
+            "type": "string"
+          },
+          "timezone": {
+            "default": "exchange",
+            "enum": [
+              "exchange",
+              "utc"
+            ],
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "TimeOfDayFilter",
         "type": "object"
       },
       "UserOut": {
@@ -690,6 +1556,263 @@
         "summary": "Readiness probe (DB + Redis)",
         "tags": [
           "system"
+        ]
+      }
+    },
+    "/strategies": {
+      "get": {
+        "operationId": "list_strategies_strategies_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StrategyOut"
+                  },
+                  "title": "Response List Strategies Strategies Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Strategies",
+        "tags": [
+          "strategies"
+        ]
+      },
+      "post": {
+        "operationId": "create_strategy_strategies_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StrategySpec-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StrategyDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Strategy",
+        "tags": [
+          "strategies"
+        ]
+      }
+    },
+    "/strategies/{strategy_id}": {
+      "get": {
+        "operationId": "get_strategy_strategies__strategy_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StrategyDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Strategy",
+        "tags": [
+          "strategies"
+        ]
+      }
+    },
+    "/strategies/{strategy_id}/versions": {
+      "get": {
+        "operationId": "list_versions_strategies__strategy_id__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StrategyVersionOut"
+                  },
+                  "title": "Response List Versions Strategies  Strategy Id  Versions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Versions",
+        "tags": [
+          "strategies"
+        ]
+      },
+      "post": {
+        "operationId": "add_version_strategies__strategy_id__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StrategySpec-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StrategyVersionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Version",
+        "tags": [
+          "strategies"
+        ]
+      }
+    },
+    "/strategies/{strategy_id}/versions/{version}": {
+      "get": {
+        "operationId": "get_version_strategies__strategy_id__versions__version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "strategy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Strategy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StrategyVersionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Version",
+        "tags": [
+          "strategies"
         ]
       }
     }
