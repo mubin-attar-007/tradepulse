@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: timescale/timescaledb:2.17.2-pg16
+        env:
+          POSTGRES_USER: trading
+          POSTGRES_PASSWORD: trading
+          POSTGRES_DB: trading
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U trading -d trading"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql+asyncpg://trading:trading@localhost:5432/trading_test
+      REDIS_URL: redis://localhost:6379/1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - name: Lint (ruff)
+        run: |
+          uv run ruff check apps/api
+          uv run ruff format --check apps/api
+      - name: Types (mypy)
+        run: uv run mypy apps/api/app
+      - name: Architecture (import-linter)
+        run: uv run lint-imports
+      - name: Migrations apply cleanly
+        env:
+          DATABASE_URL: postgresql+asyncpg://trading:trading@localhost:5432/trading
+        run: uv run alembic upgrade head
+      - name: OpenAPI contract drift guard
+        run: |
+          uv run python -m app.cli.export_openapi
+          git diff --exit-code packages/contracts/openapi.json
+      - name: Tests (pytest)
+        run: uv run pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - name: API types drift guard (OpenAPI -> TS)
+        run: |
+          npm run gen:api
+          git diff --exit-code src/lib/api/schema.ts
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
