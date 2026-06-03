@@ -1,3 +1,6 @@
-"""ai module (shell, edge layer — nothing depends on it). Fleshed out in Phase 6:
-LLM orchestration (Claude/Ollama), NL->StrategySpec (validated, never blind-
-executed), grounded narration. No AI path may ever mint a live-order token."""
+"""ai module (edge layer — nothing depends on it, so it can fail/degrade without
+taking the platform down).
+
+AI is a copilot, never an oracle: it translates NL into a validated StrategySpec
+(never auto-executed) and narrates deterministic results (never invents numbers).
+No AI code path can place an order."""

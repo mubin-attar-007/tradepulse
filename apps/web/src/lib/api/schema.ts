@@ -4,6 +4,40 @@
  */
 
 export interface paths {
+    "/ai/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Explain Backtest */
+        post: operations["explain_backtest_ai_explain_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/strategy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate Strategy */
+        post: operations["generate_strategy_ai_strategy_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/csrf": {
         parameters: {
             query?: never;
@@ -323,6 +357,31 @@ export interface components {
             time_exit_bars?: number | null;
             /** Trailing Stop Pct */
             trailing_stop_pct?: number | null;
+        };
+        /** ExplainRequest */
+        ExplainRequest: {
+            /** Context */
+            context: {
+                [key: string]: unknown;
+            };
+        };
+        /** ExplainResponse */
+        ExplainResponse: {
+            /** Provider */
+            provider: string;
+            /** Text */
+            text: string;
+        };
+        /** GenerateStrategyRequest */
+        GenerateStrategyRequest: {
+            /** Prompt */
+            prompt: string;
+        };
+        /** GenerateStrategyResponse */
+        GenerateStrategyResponse: {
+            /** Provider */
+            provider: string;
+            spec: components["schemas"]["StrategySpec-Output"];
         };
         /** Group */
         "Group-Input": {
@@ -652,6 +711,72 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    explain_backtest_ai_explain_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExplainRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExplainResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_strategy_ai_strategy_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateStrategyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerateStrategyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     issue_csrf_auth_csrf_get: {
         parameters: {
             query?: never;
