@@ -176,6 +176,101 @@
         "title": "BarOut",
         "type": "object"
       },
+      "BrokerConnectionCreate": {
+        "properties": {
+          "api_key": {
+            "minLength": 1,
+            "title": "Api Key",
+            "type": "string"
+          },
+          "api_secret": {
+            "minLength": 1,
+            "title": "Api Secret",
+            "type": "string"
+          },
+          "broker": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Broker",
+            "type": "string"
+          },
+          "env": {
+            "default": "paper",
+            "enum": [
+              "paper",
+              "live"
+            ],
+            "title": "Env",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "required": [
+          "broker",
+          "api_key",
+          "api_secret"
+        ],
+        "title": "BrokerConnectionCreate",
+        "type": "object"
+      },
+      "BrokerConnectionOut": {
+        "properties": {
+          "broker": {
+            "title": "Broker",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "env": {
+            "title": "Env",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "required": [
+          "id",
+          "broker",
+          "env",
+          "label",
+          "is_active",
+          "created_at"
+        ],
+        "title": "BrokerConnectionOut",
+        "type": "object"
+      },
       "Comparison": {
         "additionalProperties": false,
         "properties": {
@@ -682,6 +777,74 @@
           "calendar"
         ],
         "title": "InstrumentOut",
+        "type": "object"
+      },
+      "LiveOrderRequest": {
+        "properties": {
+          "broker_connection_id": {
+            "format": "uuid",
+            "title": "Broker Connection Id",
+            "type": "string"
+          },
+          "confirmation_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmation Token"
+          },
+          "qty": {
+            "exclusiveMinimum": 0.0,
+            "title": "Qty",
+            "type": "number"
+          },
+          "side": {
+            "enum": [
+              "buy",
+              "sell"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "symbol": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "broker_connection_id",
+          "symbol",
+          "side",
+          "qty"
+        ],
+        "title": "LiveOrderRequest",
+        "type": "object"
+      },
+      "LivePreflightOut": {
+        "properties": {
+          "allowed": {
+            "title": "Allowed",
+            "type": "boolean"
+          },
+          "blocked_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blocked Reasons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "allowed",
+          "blocked_reasons"
+        ],
+        "title": "LivePreflightOut",
         "type": "object"
       },
       "LoginRequest": {
@@ -1813,6 +1976,70 @@
         ]
       }
     },
+    "/brokers/connections": {
+      "get": {
+        "operationId": "list_connections_brokers_connections_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BrokerConnectionOut"
+                  },
+                  "title": "Response List Connections Brokers Connections Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Connections",
+        "tags": [
+          "live-trading"
+        ]
+      },
+      "post": {
+        "operationId": "add_connection_brokers_connections_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrokerConnectionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrokerConnectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Connection",
+        "tags": [
+          "live-trading"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "operationId": "health_health_get",
@@ -1835,6 +2062,72 @@
         "summary": "Liveness probe",
         "tags": [
           "system"
+        ]
+      }
+    },
+    "/live/orders": {
+      "post": {
+        "operationId": "submit_live_order_live_orders_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveOrderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Submit Live Order Live Orders Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Live Order",
+        "tags": [
+          "live-trading"
+        ]
+      }
+    },
+    "/live/preflight": {
+      "get": {
+        "operationId": "live_preflight_live_preflight_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LivePreflightOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Live Preflight",
+        "tags": [
+          "live-trading"
         ]
       }
     },

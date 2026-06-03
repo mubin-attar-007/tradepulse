@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     alpaca_api_key: str = ""
     alpaca_api_secret: str = ""
 
+    # --- Live trading (gated; real money OFF by default) ---
+    live_trading_enabled: bool = False
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.cors_allow_origins.split(",") if o.strip()]

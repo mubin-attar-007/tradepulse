@@ -158,6 +158,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/brokers/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Connections */
+        get: operations["list_connections_brokers_connections_get"];
+        put?: never;
+        /** Add Connection */
+        post: operations["add_connection_brokers_connections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -167,6 +185,40 @@ export interface paths {
         };
         /** Liveness probe */
         get: operations["health_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/live/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Live Order */
+        post: operations["submit_live_order_live_orders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/live/preflight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Live Preflight */
+        get: operations["live_preflight_live_preflight_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -513,6 +565,44 @@ export interface components {
             /** Volume */
             volume: string;
         };
+        /** BrokerConnectionCreate */
+        BrokerConnectionCreate: {
+            /** Api Key */
+            api_key: string;
+            /** Api Secret */
+            api_secret: string;
+            /** Broker */
+            broker: string;
+            /**
+             * Env
+             * @default paper
+             * @enum {string}
+             */
+            env: "paper" | "live";
+            /** Label */
+            label?: string | null;
+        };
+        /** BrokerConnectionOut */
+        BrokerConnectionOut: {
+            /** Broker */
+            broker: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Env */
+            env: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Label */
+            label: string | null;
+        };
         /** Comparison */
         Comparison: {
             left: components["schemas"]["Operand"];
@@ -673,6 +763,32 @@ export interface components {
             quote_currency: string;
             /** Symbol */
             symbol: string;
+        };
+        /** LiveOrderRequest */
+        LiveOrderRequest: {
+            /**
+             * Broker Connection Id
+             * Format: uuid
+             */
+            broker_connection_id: string;
+            /** Confirmation Token */
+            confirmation_token?: string | null;
+            /** Qty */
+            qty: number;
+            /**
+             * Side
+             * @enum {string}
+             */
+            side: "buy" | "sell";
+            /** Symbol */
+            symbol: string;
+        };
+        /** LivePreflightOut */
+        LivePreflightOut: {
+            /** Allowed */
+            allowed: boolean;
+            /** Blocked Reasons */
+            blocked_reasons: string[];
         };
         /** LoginRequest */
         LoginRequest: {
@@ -1247,6 +1363,59 @@ export interface operations {
             };
         };
     };
+    list_connections_brokers_connections_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrokerConnectionOut"][];
+                };
+            };
+        };
+    };
+    add_connection_brokers_connections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrokerConnectionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrokerConnectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     health_health_get: {
         parameters: {
             query?: never;
@@ -1265,6 +1434,61 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    submit_live_order_live_orders_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LiveOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    live_preflight_live_preflight_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LivePreflightOut"];
                 };
             };
         };
