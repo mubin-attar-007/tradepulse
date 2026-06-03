@@ -9,6 +9,7 @@ export type User = components["schemas"]["UserOut"];
 export type Instrument = components["schemas"]["InstrumentOut"];
 export type Bar = components["schemas"]["BarOut"];
 export type Quote = components["schemas"]["QuoteOut"];
+export type PaperSession = components["schemas"]["PaperSessionOut"];
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 const UNSAFE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -78,5 +79,8 @@ export const api = {
   latest: (id: string) => apiFetch<Quote>(`/market/instruments/${id}/latest`),
   wsTicket: () =>
     apiFetch<{ ticket: string; expires_in: number }>("/market/ws-ticket", { method: "POST" }),
+
+  paperSessions: () => apiFetch<PaperSession[]>("/paper/sessions"),
 };
+
 

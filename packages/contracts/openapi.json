@@ -76,6 +76,20 @@
         "title": "Comparison",
         "type": "object"
       },
+      "DeployRequest": {
+        "properties": {
+          "strategy_id": {
+            "format": "uuid",
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy_id"
+        ],
+        "title": "DeployRequest",
+        "type": "object"
+      },
       "ExitRule-Input": {
         "additionalProperties": false,
         "properties": {
@@ -607,6 +621,83 @@
           "kind"
         ],
         "title": "Operand",
+        "type": "object"
+      },
+      "PaperSessionOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "initial_cash": {
+            "title": "Initial Cash",
+            "type": "string"
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run At"
+          },
+          "session_start": {
+            "format": "date-time",
+            "title": "Session Start",
+            "type": "string"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "strategy_id": {
+            "format": "uuid",
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "strategy_version": {
+            "title": "Strategy Version",
+            "type": "integer"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "timeframe": {
+            "title": "Timeframe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "strategy_id",
+          "strategy_version",
+          "symbol",
+          "timeframe",
+          "status",
+          "initial_cash",
+          "session_start",
+          "last_run_at",
+          "snapshot"
+        ],
+        "title": "PaperSessionOut",
         "type": "object"
       },
       "PositionSizing": {
@@ -1683,6 +1774,201 @@
         "summary": "Create Ws Ticket",
         "tags": [
           "market-data"
+        ]
+      }
+    },
+    "/paper/deploy": {
+      "post": {
+        "operationId": "deploy_paper_deploy_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeployRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperSessionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Deploy",
+        "tags": [
+          "paper-trading"
+        ]
+      }
+    },
+    "/paper/sessions": {
+      "get": {
+        "operationId": "list_sessions_paper_sessions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PaperSessionOut"
+                  },
+                  "title": "Response List Sessions Paper Sessions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Sessions",
+        "tags": [
+          "paper-trading"
+        ]
+      }
+    },
+    "/paper/sessions/{session_id}": {
+      "get": {
+        "operationId": "get_session_paper_sessions__session_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperSessionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Session",
+        "tags": [
+          "paper-trading"
+        ]
+      }
+    },
+    "/paper/sessions/{session_id}/run": {
+      "post": {
+        "operationId": "run_now_paper_sessions__session_id__run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperSessionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Now",
+        "tags": [
+          "paper-trading"
+        ]
+      }
+    },
+    "/paper/sessions/{session_id}/stop": {
+      "post": {
+        "operationId": "stop_paper_sessions__session_id__stop_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperSessionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stop",
+        "tags": [
+          "paper-trading"
         ]
       }
     },

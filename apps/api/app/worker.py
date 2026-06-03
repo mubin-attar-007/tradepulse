@@ -72,6 +72,21 @@ async def poll_quotes(_ctx: dict[str, Any]) -> int:
         return await poll_and_publish(session, get_redis_client(), get_settings())
 
 
+async def run_paper_sessions(_ctx: dict[str, Any]) -> int:
+    """Cron: advance every running paper session by re-running its strategy over
+    the session window against the latest bars."""
+    from app.core.db import get_sessionmaker
+    from app.modules.trading.repository import all_running_sessions
+    from app.modules.trading.service import PaperService
+
+    async with get_sessionmaker()() as session:
+        sessions = await all_running_sessions(session)
+        for paper in sessions:
+            await PaperService(session, paper.owner_id).run_session(paper)
+        await session.commit()
+    return len(sessions)
+
+
 async def _on_startup(_ctx: dict[str, Any]) -> None:
     configure_logging()
     logger.info("worker_startup")
@@ -86,7 +101,8 @@ class WorkerSettings:
     on_startup = staticmethod(_on_startup)
     on_shutdown = staticmethod(_on_shutdown)
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
-    # Poll + publish live quotes twice a minute (market-hours-aware inside).
+    # Poll quotes at :00/:30; advance paper sessions at :15/:45 (offset).
     cron_jobs: ClassVar[list[Any]] = [
-        cron(poll_quotes, second={0, 30})  # type: ignore[arg-type]
+        cron(poll_quotes, second={0, 30}),  # type: ignore[arg-type]
+        cron(run_paper_sessions, second={15, 45}),  # type: ignore[arg-type]
     ]

@@ -61,7 +61,13 @@ def _size(
     return _D0
 
 
-def run(spec: StrategySpec, bars: Sequence[BarPoint], config: ExecutionConfig) -> BacktestResult:
+def run(
+    spec: StrategySpec,
+    bars: Sequence[BarPoint],
+    config: ExecutionConfig,
+    *,
+    close_at_end: bool = True,
+) -> BacktestResult:
     df, arrays = compute.build_arrays(bars)
     arrays.update(compute.compute_indicators(df, spec.indicators))
 
@@ -239,10 +245,20 @@ def run(spec: StrategySpec, bars: Sequence[BarPoint], config: ExecutionConfig) -
             ):
                 pending_exit = "signal"
 
-    # close any open position at the final bar's close
+    # Backtest flattens at the end for clean accounting; paper trading
+    # (close_at_end=False) keeps the position open and reports it.
+    open_position: dict[str, object] | None = None
     if in_pos:
-        close_position(sell_fill(bars[-1].close), bars[-1].ts, len(bars) - 1, "eod")
-        equity_curve[-1] = EquityPoint(ts=bars[-1].ts, equity=cash)
+        if close_at_end:
+            close_position(sell_fill(bars[-1].close), bars[-1].ts, len(bars) - 1, "eod")
+            equity_curve[-1] = EquityPoint(ts=bars[-1].ts, equity=cash)
+        else:
+            open_position = {
+                "qty": str(qty),
+                "entry_price": str(entry_price),
+                "entry_ts": entry_ts.isoformat(),
+                "bars_held": len(bars) - 1 - entry_i,
+            }
 
     final_equity = equity_curve[-1].equity if equity_curve else config.initial_cash
     metrics = compute_metrics(equity_curve, trades, spec.timeframe)
@@ -255,5 +271,6 @@ def run(spec: StrategySpec, bars: Sequence[BarPoint], config: ExecutionConfig) -
         metrics=metrics,
         total_commission=total_commission,
         bars=len(bars),
+        open_position=open_position,
         engine_version=ENGINE_VERSION,
     )

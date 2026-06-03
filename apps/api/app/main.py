@@ -28,6 +28,7 @@ from app.modules.auth.router import router as auth_router
 from app.modules.market_data.realtime import close_hub
 from app.modules.market_data.router import router as market_router
 from app.modules.strategies.router import router as strategies_router
+from app.modules.trading.router import router as trading_router
 
 logger = get_logger("app")
 
@@ -97,6 +98,7 @@ def create_app() -> FastAPI:
     app.include_router(market_router)
     app.include_router(strategies_router)
     app.include_router(ai_router)
+    app.include_router(trading_router)
     return app
 
 
