@@ -7,7 +7,7 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/", "/login"];
 const SESSION_COOKIES = ["session", "__Host-session"];
 
 export function proxy(request: NextRequest): NextResponse {

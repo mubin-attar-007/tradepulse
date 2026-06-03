@@ -1,11 +1,14 @@
 @import "tailwindcss";
 
-/* Dark-first, finance-grade palette. A `.light` class on <html> flips the theme. */
+/* ============================================================================
+   Premium fintech design system. Dark-first; `.light` on <html> flips it.
+   ========================================================================== */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-elevated: var(--elevated);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
@@ -13,6 +16,7 @@
   --color-ring: var(--ring);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
   --color-profit: var(--profit);
   --color-loss: var(--loss);
   --font-sans: var(--font-geist-sans);
@@ -20,44 +24,124 @@
 }
 
 :root {
-  --background: #0a0e14;
-  --foreground: #e6e8eb;
-  --card: #11161d;
-  --card-foreground: #e6e8eb;
-  --muted: #1a212b;
-  --muted-foreground: #8b949e;
-  --border: #232a34;
-  --input: #232a34;
-  --ring: #3b82f6;
-  --primary: #3b82f6;
+  --background: #07090d;
+  --foreground: #e7ebf0;
+  --card: #0e1219;
+  --card-foreground: #e7ebf0;
+  --elevated: #141b25;
+  --muted: #161d28;
+  --muted-foreground: #7d8694;
+  --border: #1e2632;
+  --input: #1e2632;
+  --ring: #4f8cff;
+  --primary: #4f8cff;
   --primary-foreground: #ffffff;
-  --profit: #16c784;
-  --loss: #ea3943;
+  --accent: #7c5cff;
+  --profit: #1fd6a3;
+  --loss: #ff5a6a;
+  --glass: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --gradient-brand: linear-gradient(135deg, #4f8cff 0%, #7c5cff 100%);
 }
 
 .light {
-  --background: #ffffff;
-  --foreground: #0a0e14;
-  --card: #f7f8fa;
-  --card-foreground: #0a0e14;
-  --muted: #eef1f4;
+  --background: #f6f8fb;
+  --foreground: #0b0f17;
+  --card: #ffffff;
+  --card-foreground: #0b0f17;
+  --elevated: #ffffff;
+  --muted: #eef1f6;
   --muted-foreground: #5b6571;
-  --border: #e2e6ea;
-  --input: #e2e6ea;
-  --ring: #3b82f6;
-  --primary: #2563eb;
+  --border: #e4e8ee;
+  --input: #e4e8ee;
+  --ring: #2f6bf0;
+  --primary: #2f6bf0;
   --primary-foreground: #ffffff;
+  --accent: #6d4bff;
   --profit: #0ea371;
-  --loss: #d22f3a;
+  --loss: #e0394a;
+  --glass: rgba(15, 22, 35, 0.03);
+  --glass-border: rgba(15, 22, 35, 0.08);
+  --gradient-brand: linear-gradient(135deg, #2f6bf0 0%, #6d4bff 100%);
 }
 
 body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Tabular figures for financial numbers. */
+/* --- Utilities --- */
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid var(--glass-border);
+}
+.gradient-text {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.gradient-brand {
+  background: var(--gradient-brand);
+}
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* Ambient hero glow for the landing page. */
+.hero-glow {
+  background:
+    radial-gradient(60% 50% at 50% 0%, rgba(124, 92, 255, 0.18), transparent 70%),
+    radial-gradient(40% 40% at 80% 20%, rgba(79, 140, 255, 0.14), transparent 70%);
+}
+
+/* --- Micro-interactions --- */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-up {
+  animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--muted);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+  animation: shimmer 1.4s infinite;
+}
+
+/* --- Scrollbar --- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
 }
