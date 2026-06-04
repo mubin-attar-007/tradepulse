@@ -22,7 +22,19 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     # Enable extensions used now and in upcoming phases (idempotent).
-    op.execute("CREATE EXTENSION IF NOT EXISTS timescaledb")  # Phase 2 OHLCV hypertables
+    # TimescaleDB is optional: enable it only where available (e.g. the timescaledb
+    # Docker image), so the same migrations also run on a plain managed Postgres
+    # (Neon/Supabase/RDS). Without it, ohlcv stays a regular table — see the
+    # market-data migration and the portable bar-aggregation query.
+    op.execute(
+        """
+        DO $$ BEGIN
+          IF EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'timescaledb') THEN
+            CREATE EXTENSION IF NOT EXISTS timescaledb;
+          END IF;
+        END $$;
+        """
+    )
     op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
     op.execute("CREATE EXTENSION IF NOT EXISTS citext")
     op.execute("CREATE EXTENSION IF NOT EXISTS vector")  # Phase 6 embeddings (pgvector)
