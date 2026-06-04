@@ -1,0 +1,7 @@
+# Generated contract artifacts must be LF on every platform, so the CI drift
+# guards (`git diff --exit-code`) are deterministic regardless of the dev's OS.
+packages/contracts/openapi.json text eol=lf
+apps/web/src/lib/api/schema.ts   text eol=lf
+
+# Shell scripts that run on the server must always be LF.
+*.sh text eol=lf
