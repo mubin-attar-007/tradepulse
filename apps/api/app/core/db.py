@@ -71,7 +71,7 @@ _sessionmaker: async_sessionmaker[AsyncSession] | None = None
 _LIBPQ_ONLY_PARAMS = {"sslmode", "channel_binding", "target_session_attrs"}
 
 
-def _async_engine_args(raw_url: str) -> tuple[str, dict[str, object]]:
+def async_engine_args(raw_url: str) -> tuple[str, dict[str, object]]:
     """Normalize a Postgres URL for asyncpg: ensure the ``+asyncpg`` scheme and
     translate libpq-only query params (``sslmode``/``channel_binding``) — which
     asyncpg rejects — into an SSL connect arg. A plain local URL is unchanged, so
@@ -93,7 +93,7 @@ def _async_engine_args(raw_url: str) -> tuple[str, dict[str, object]]:
 def get_engine() -> AsyncEngine:
     global _engine
     if _engine is None:
-        url, connect_args = _async_engine_args(get_settings().database_url)
+        url, connect_args = async_engine_args(get_settings().database_url)
         _engine = create_async_engine(
             url, pool_pre_ping=True, future=True, connect_args=connect_args
         )
