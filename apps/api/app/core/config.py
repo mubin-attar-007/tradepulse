@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     cookie_domain: str = ""
     session_ttl_seconds: int = 1_209_600  # 14 days
     broker_cred_key: str = ""  # base64 32-byte secretbox key (encrypt broker creds at rest)
+    # Shared secret for the POST /internal/tick cron endpoint (worker replacement on
+    # free PaaS hosts with no background process). Empty = endpoint disabled (404).
+    tick_secret: str = ""
 
     # --- CORS (credentialed allowlist; NEVER a wildcard) ---
     cors_allow_origins: str = "http://localhost:3000"
