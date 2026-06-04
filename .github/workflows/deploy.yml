@@ -1,12 +1,10 @@
 name: Deploy
 
-# Runs only after CI succeeds on main (so we never build/ship a red commit),
-# or on a manual dispatch.
+# Manual-only. The production VM builds its own images via infra/deploy.sh, so we
+# do NOT auto-build/push to GHCR on every commit (saves Actions minutes and avoids
+# a long, noisy job). Trigger this from the Actions tab only if you specifically
+# want prebuilt images in GitHub's container registry.
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -15,13 +13,15 @@ concurrency:
 
 jobs:
   images:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
+      # Container registries require lowercase names; the repo slug has uppercase.
+      - name: Lowercase image prefix
+        run: echo "IMAGE_PREFIX=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -34,8 +34,8 @@ jobs:
           file: infra/Dockerfile.api
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/api:latest
-            ghcr.io/${{ github.repository }}/api:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/api:latest
+            ${{ env.IMAGE_PREFIX }}/api:${{ github.sha }}
       - name: Build + push web image
         uses: docker/build-push-action@v6
         with:
@@ -43,8 +43,8 @@ jobs:
           file: infra/Dockerfile.web
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/web:latest
-            ghcr.io/${{ github.repository }}/web:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/web:latest
+            ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }}
 
   # Runs only once you set the DEPLOY_HOST repo variable + DEPLOY_SSH_KEY secret.
   deploy:
