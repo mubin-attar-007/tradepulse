@@ -81,12 +81,19 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("instrument_id", "ts", name=op.f("pk_ohlcv")),
     )
     # ### end Alembic commands ###
-    # Convert ohlcv into a TimescaleDB hypertable partitioned on `ts`.
-    # MVP: a single 1-minute hypertable; higher timeframes derive via time_bucket.
-    # (Continuous aggregates / compression / retention are deferred until measured.)
+    # Convert ohlcv into a TimescaleDB hypertable partitioned on `ts` — but ONLY if
+    # TimescaleDB is installed. On a plain Postgres (Neon/Supabase/RDS free tiers)
+    # ohlcv stays a normal table; reads use portable SQL, so behavior is identical
+    # (just without the time-series partitioning optimization).
     op.execute(
-        "SELECT create_hypertable('ohlcv', 'ts', "
-        "chunk_time_interval => INTERVAL '7 days', if_not_exists => TRUE)"
+        """
+        DO $$ BEGIN
+          IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') THEN
+            PERFORM create_hypertable('ohlcv', 'ts',
+              chunk_time_interval => INTERVAL '7 days', if_not_exists => TRUE);
+          END IF;
+        END $$;
+        """
     )
 
 

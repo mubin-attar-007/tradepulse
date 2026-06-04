@@ -4,8 +4,9 @@ Closed-bar discipline (invariant #3) is enforced at the source: every read here
 returns only ``is_final`` bars, so look-ahead is structurally impossible. The
 backtest/paper services read a window via ``get_bars``; ``bars_as_of`` adds an
 explicit point-in-time cutoff for replay scenarios that need to reconstruct what
-was visible at an instant. Higher timeframes are derived with ``time_bucket``;
-we never duplicate raw 1-minute data.
+was visible at an instant. Higher timeframes are derived on the fly with portable
+SQL (``date_bin`` aggregation — works on plain Postgres or TimescaleDB); we never
+duplicate raw 1-minute data.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from app.modules.market_data.providers.base import CanonicalBar
 
 _BAR = timedelta(minutes=1)  # MVP stores 1-minute bars only
 
-# Map a UI timeframe to a Postgres interval literal for time_bucket().
+# Map a UI timeframe to a Postgres interval literal for date_bin() aggregation.
 _TIMEFRAME_INTERVALS: dict[str, str] = {
     "5m": "5 minutes",
     "15m": "15 minutes",
@@ -135,7 +136,7 @@ async def get_bars(
     end: datetime,
 ) -> list[BarPoint]:
     """History for charts. ``1m`` reads raw; higher timeframes aggregate on the
-    fly via ``time_bucket`` (no duplicated storage)."""
+    fly with portable ``date_bin`` SQL (no duplicated storage)."""
     if timeframe == "1m":
         stmt = (
             select(OHLCV)
@@ -155,15 +156,19 @@ async def get_bars(
         raise ValueError(f"Unsupported timeframe: {timeframe!r}")
 
     # `interval` is from a fixed whitelist above, so inlining it is injection-safe
-    # (asyncpg cannot bind a string to an interval-typed parameter).
+    # (asyncpg cannot bind a string to an interval-typed parameter). Uses only
+    # standard Postgres — date_bin (PG14+) for bucketing and ordered array_agg for
+    # first-open / last-close — so it runs identically on plain Postgres and on
+    # TimescaleDB (no time_bucket/first/last dependency). The UTC origin keeps
+    # hourly/daily buckets aligned regardless of the DB session timezone.
     query = text(
         f"""
-        SELECT time_bucket(INTERVAL '{interval}', ts) AS bucket,
-               first(open, ts)  AS open,
-               max(high)        AS high,
-               min(low)         AS low,
-               last(close, ts)  AS close,
-               sum(volume)      AS volume
+        SELECT date_bin(INTERVAL '{interval}', ts, TIMESTAMPTZ '1970-01-01 00:00:00+00') AS bucket,
+               (array_agg(open ORDER BY ts ASC))[1]   AS open,
+               max(high)                               AS high,
+               min(low)                                AS low,
+               (array_agg(close ORDER BY ts DESC))[1]  AS close,
+               sum(volume)                             AS volume
         FROM ohlcv
         WHERE instrument_id = :iid AND is_final AND ts >= :start AND ts < :end
         GROUP BY bucket
