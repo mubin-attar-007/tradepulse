@@ -8,10 +8,18 @@ set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 default:
     @just --list
 
-# One command: clone -> running stack (deps, containers, migrations)
+# One command: clone -> running stack with REAL seeded + backfilled data
 bootstrap:
-    uv sync && just up && just migrate
-    @echo "Bootstrap complete. Run 'just api' and 'just web'."
+    uv sync && just up && just migrate && just seed-demo
+    @echo "Bootstrap complete. Run 'just api', 'just worker', and 'just web'."
+
+# Seed the universe + pull real recent bars (best-effort: crypto via CCXT needs no
+# key; equities via yfinance. A failing provider is tolerated so bootstrap still succeeds).
+seed-demo:
+    just seed
+    -just backfill BTC/USD 2
+    -just backfill ETH/USD 2
+    -just backfill SPY 5
 
 # --- Infra ---
 up:

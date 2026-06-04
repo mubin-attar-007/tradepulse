@@ -13,6 +13,7 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError, NotFoundError
+from app.core.logging import get_logger
 from app.modules.backtesting.models import Backtest
 from app.modules.backtesting.repository import BacktestRepository
 from app.modules.backtesting.service import run_backtest
@@ -20,6 +21,8 @@ from app.modules.backtesting.snapshot import result_to_dict
 from app.modules.backtesting.types import ExecutionConfig
 from app.modules.strategies.repository import StrategyRepository, StrategyVersionRepository
 from app.modules.strategies.spec import StrategySpec
+
+logger = get_logger("backtesting")
 
 
 class BacktestService:
@@ -61,6 +64,11 @@ class BacktestService:
         except (NotFoundError, BadRequestError) as exc:
             backtest.status = "failed"
             backtest.error = str(exc.detail)[:500]
+        except Exception as exc:
+            # Persist the failure (status='failed') instead of surfacing a 500.
+            logger.exception("backtest_run_failed", strategy_id=str(strategy_id))
+            backtest.status = "failed"
+            backtest.error = str(exc)[:500]
         await self.repo.add(backtest)
         await self.session.flush()
         return backtest

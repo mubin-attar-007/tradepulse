@@ -2,31 +2,48 @@
 
 A production-grade, personal-first (SaaS-ready) platform for **US equities + crypto**: market data, charting, a strategy builder, an honest event-driven backtester, paper trading, and an AI copilot. Live real-money trading is a gated, deferred phase.
 
-> Greenfield rebuild. The legacy college-era bot lives in `_archived/` (untracked) as an ideas-only reference. Full architecture & roadmap: see the approved plan file.
+> Greenfield rebuild. Full architecture & roadmap: see the approved plan file.
 
 ## Stack
 - **Backend:** Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2.0 (async), Alembic, ARQ
 - **Data:** PostgreSQL + TimescaleDB, Redis
+- **Market data (free):** CCXT (crypto OHLCV) + yfinance (equities) out of the box; Alpaca optional (free paper keys)
 - **Frontend:** Next.js (App Router) + TypeScript + Tailwind + shadcn/ui (TanStack Query + Zustand)
-- **AI:** Claude (Haiku/Sonnet) + local Ollama
+- **AI (free):** Google Gemini (free tier) by default, or a local Ollama model — both no-cost
 - **Tooling:** `uv` (Python), `npm` (web), `just` (tasks), Docker Compose, Caddy (prod)
 
 ## Quick start
 ```bash
 cp .env.example .env          # then fill secrets (see comments in the file)
 just bootstrap                # uv sync + docker up + migrate
+just seed                     # register the equity + crypto instrument universe
+just backfill BTC/USD 2       # pull 2 days of REAL 1m bars (free, via CCXT) — repeat per symbol
 just api                      # FastAPI at http://localhost:8080  (/docs, /health)
-just web                      # Next.js at http://localhost:3000   (later phases)
+just worker                   # ARQ worker: live ingestion + paper-trading cron
+just web                      # Next.js at http://localhost:3000
 ```
 
 ## Layout
 ```
-apps/api      FastAPI app + ARQ worker (modular monolith: core kernel + domain modules)
-apps/web      Next.js frontend
-packages/     shared contracts (generated OpenAPI -> TS client + zod)
-infra/        Docker, Caddy, deploy/backup scripts
-docs/adr/     Architecture Decision Records
-_archived/    legacy reference (untracked)
+apps/
+  api/                  FastAPI app + ARQ worker (modular monolith)
+    app/
+      core/             kernel: config, db, redis, security, errors, events, observability
+      modules/
+        auth/           users, sessions, credentials, broker_connections (encrypted)
+        market_data/    instruments, OHLCV store, providers (ccxt/yfinance/alpaca), realtime
+        strategies/     canonical StrategySpec DSL, CRUD, versioning
+        backtesting/    event-driven engine, metrics, async orchestration
+        trading/        paper engine, portfolio, brokers + gated live seam
+        ai/             LLM copilot (Gemini/Ollama): NL->spec, narration
+        audit/          append-only event log
+      cli/              seed, backfill, export_openapi
+    alembic/            migrations (single linear head)
+    tests/              unit + integration + financial-correctness
+  web/                  Next.js frontend (app router, generated typed API client)
+packages/contracts/     OpenAPI spec -> generated TS client + zod
+infra/                  Dockerfiles, compose.prod.yaml, Caddyfile, deploy/backup scripts, observability
+docs/                   DEPLOY runbook + Architecture Decision Records (docs/adr/)
 ```
 
 ## Guiding invariants
