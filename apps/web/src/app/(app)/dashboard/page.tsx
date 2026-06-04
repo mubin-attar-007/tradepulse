@@ -5,6 +5,7 @@ import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { LivePrice } from "@/components/live-price";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,7 +28,18 @@ export default function DashboardPage() {
   const paper = useQuery({ queryKey: ["paper-sessions"], queryFn: () => api.paperSessions() });
   const instruments = useQuery({ queryKey: ["instruments"], queryFn: () => api.instruments() });
 
-  const running = paper.data?.filter((s) => s.status === "running").length;
+  const runningSessions = paper.data?.filter((s) => s.status === "running") ?? [];
+  const running = runningSessions.length;
+
+  // Display-only aggregate of paper equity across active sessions (latest snapshot,
+  // or starting cash before the first run). Money math that matters stays server-side.
+  const portfolioValue = runningSessions.reduce((sum, s) => {
+    const eq = (s.snapshot as { final_equity?: string } | null)?.final_equity;
+    return sum + (eq ? Number(eq) : Number(s.initial_cash));
+  }, 0);
+  const portfolioLabel = paper.isLoading
+    ? "…"
+    : `$${portfolioValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
   return (
     <div className="space-y-6">
@@ -39,7 +51,11 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="Portfolio Value" value="$0.00" hint="Paper · no positions yet" />
+        <Stat
+          label="Portfolio Value"
+          value={portfolioLabel}
+          hint={running ? `paper · ${running} active` : "deploy a strategy to begin"}
+        />
         <Stat label="Strategies" value={strategies.data?.length ?? "—"} hint="canonical specs" />
         <Stat label="Backtests" value={backtests.data?.length ?? "—"} hint="runs stored" />
         <Stat label="Paper sessions" value={running ?? "—"} hint="running now" />
@@ -62,10 +78,11 @@ export default function DashboardPage() {
                   <Link
                     key={i.id}
                     href={`/chart/${i.id}`}
-                    className="grid grid-cols-[5rem_1fr_auto] items-center gap-3 py-2.5 text-sm transition-colors hover:text-primary"
+                    className="grid grid-cols-[5rem_1fr_auto_auto] items-center gap-3 py-2.5 text-sm transition-colors hover:text-primary"
                   >
                     <span className="font-medium tabular-nums">{i.symbol}</span>
                     <span className="truncate text-muted-foreground">{i.name}</span>
+                    <LivePrice instrumentId={i.id} />
                     <Badge variant={i.asset_class === "crypto" ? "accent" : "default"}>
                       {i.asset_class}
                     </Badge>

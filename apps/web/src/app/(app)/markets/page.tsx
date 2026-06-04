@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 
+import { LivePrice } from "@/components/live-price";
 import { api } from "@/lib/api/client";
 
 export default function MarketsPage() {
@@ -21,13 +22,14 @@ export default function MarketsPage() {
               <th className="px-4 py-2 font-medium">Symbol</th>
               <th className="px-4 py-2 font-medium">Name</th>
               <th className="px-4 py-2 font-medium">Class</th>
+              <th className="px-4 py-2 text-right font-medium">Last</th>
               <th className="px-4 py-2" />
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td className="px-4 py-3 text-muted-foreground" colSpan={4}>
+                <td className="px-4 py-3 text-muted-foreground" colSpan={5}>
                   Loading…
                 </td>
               </tr>
@@ -37,6 +39,9 @@ export default function MarketsPage() {
                   <td className="px-4 py-2 font-medium tabular-nums">{instrument.symbol}</td>
                   <td className="px-4 py-2 text-muted-foreground">{instrument.name}</td>
                   <td className="px-4 py-2 text-muted-foreground">{instrument.asset_class}</td>
+                  <td className="px-4 py-2 text-right">
+                    <LivePrice instrumentId={instrument.id} />
+                  </td>
                   <td className="px-4 py-2 text-right">
                     <Link className="text-primary hover:underline" href={`/chart/${instrument.id}`}>
                       Open chart →
