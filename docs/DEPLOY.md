@@ -3,6 +3,48 @@
 Single-VPS deployment (modular monolith) behind Caddy with auto-TLS. All commands
 run from the repo root on the VPS unless noted.
 
+## 0. Free-tier deployment (zero purchase)
+
+You do **not** need to buy a server, a database, or a domain. The whole stack
+(Postgres + TimescaleDB, Redis, API, worker, web, Caddy) runs on a single
+**always-free** cloud VM with no recurring charge.
+
+**Recommended: Oracle Cloud "Always Free" VM.** Free *forever* (not a trial):
+an Ampere ARM `VM.Standard.A1.Flex` with up to **4 OCPU / 24 GB RAM** + 200 GB
+storage + a public IPv4. That is far more than this stack needs.
+1. Create an Oracle Cloud account (a card is required for identity check; Always
+   Free resources never bill). Launch an `A1.Flex` Ubuntu 22.04 instance.
+   *If ARM capacity is "out of host capacity" in your region, use the Always-Free
+   AMD `E2.1.Micro` (1 GB RAM) instead and add swap — see the 1 GB note below.*
+2. In the instance's **VCN → Security List**, add ingress rules for TCP **80** and
+   **443** from `0.0.0.0/0`. Then on the box: `sudo iptables -I INPUT 6 -p tcp -m state --state NEW -m tcp --dport 443 -j ACCEPT` (and `:80`), `sudo netfilter-persistent save` (Oracle images ship a restrictive iptables).
+3. Install Docker + Compose v2: `curl -fsSL https://get.docker.com | sh`.
+4. Get a **free domain + TLS** (pick one):
+   - **DuckDNS** (simplest): register a free `yourname.duckdns.org` subdomain,
+     point it at the VM's public IP. Caddy then gets a real Let's Encrypt cert
+     automatically over port 80/443. Set `DOMAIN=yourname.duckdns.org`.
+   - **Cloudflare Tunnel** (works even with no public IP / behind NAT): run
+     `cloudflared` on the VM; Cloudflare terminates TLS at its edge. Use this if
+     you can't open ports 80/443. (Then Caddy can serve plain HTTP internally.)
+5. Deploy exactly as in §2–§3 below — the same `infra/deploy.sh`. **Total cost: $0.**
+
+**Other always-free VMs (fallbacks):** Google Cloud `e2-micro` (always free in
+`us-west1/us-central1/us-east1`, 1 GB RAM, 30 GB disk); AWS/Azure micro tiers are
+free for **12 months only**, then they bill — prefer Oracle/GCP for "free forever".
+
+**1 GB RAM note:** the full stack is comfortable in ~1.5–2 GB. On a 1 GB box, add
+swap first: `sudo fallocate -l 3G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile && echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab`. The Oracle ARM box (24 GB) needs none of this.
+
+**Alternative — split across managed free tiers (more moving parts):** host the
+Next.js web on **Vercel** (Hobby, free) and Redis on **Upstash** (free). The catch
+is the database: this app uses TimescaleDB (hypertables + `time_bucket`), which the
+free Postgres tiers (Neon/Supabase) do **not** provide, so the schema migration
+fails there. Free managed *Timescale* is trial-only. → For a no-purchase deploy,
+the single Always-Free VM above is strictly simpler and keeps real TimescaleDB.
+
+> Finish building/testing locally first (`just bootstrap` …). Deploy when ready —
+> the steps below are identical on a paid VPS or a free Oracle/GCP VM.
+
 ## 1. Provision
 - A small Linux VPS (2 vCPU / 4 GB is plenty to start), Docker + Compose v2 installed.
 - A domain (e.g. `trade.example.com`) with an **A record → the VPS IP**.

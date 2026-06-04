@@ -1,8 +1,10 @@
 """Market-data persistence + the point-in-time read contract.
 
-``bars_as_of`` is the SOLE backtest/paper read path: it returns only bars that
-were fully closed at the given instant, making look-ahead structurally
-impossible (invariant #3). Higher timeframes are derived with ``time_bucket``;
+Closed-bar discipline (invariant #3) is enforced at the source: every read here
+returns only ``is_final`` bars, so look-ahead is structurally impossible. The
+backtest/paper services read a window via ``get_bars``; ``bars_as_of`` adds an
+explicit point-in-time cutoff for replay scenarios that need to reconstruct what
+was visible at an instant. Higher timeframes are derived with ``time_bucket``;
 we never duplicate raw 1-minute data.
 """
 
