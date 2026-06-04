@@ -47,12 +47,11 @@ class Settings(BaseSettings):
     sentry_dsn: str = ""
     metrics_enabled: bool = True
 
-    # --- AI (Phase 6) ---
-    anthropic_api_key: str = ""
+    # --- AI (Phase 6): both options are free — Gemini free tier, or local Ollama ---
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
     ollama_base_url: str = "http://localhost:11434"
-    ai_default_provider: str = "gemini"  # gemini | anthropic | ollama
+    ai_default_provider: str = "gemini"  # gemini | ollama
 
     # --- Market data / brokers ---
     alpaca_api_key: str = ""
