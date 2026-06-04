@@ -50,3 +50,8 @@ docs/                   DEPLOY runbook + Architecture Decision Records (docs/adr
 1. Every domain row is `owner_id`-scoped (SaaS-ready tenancy).
 2. Money is `Decimal`/`NUMERIC` server-side; it crosses the API as decimal strings.
 3. One bar lifecycle (`forming → is_final`); decisions only ever act on closed bars.
+
+## License
+Proprietary — © 2026 Mubin Attar. All rights reserved. Personal and commercial
+use is reserved to the owner; no third-party use without written permission.
+See [LICENSE](LICENSE).
