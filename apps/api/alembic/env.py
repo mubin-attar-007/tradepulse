@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 import app.models  # noqa: F401  (side effect: register models on Base.metadata)
 from alembic import context
 from app.core.config import get_settings
-from app.core.db import Base
+from app.core.db import Base, async_engine_args
 
 config = context.config
 if config.config_file_name is not None:
@@ -68,7 +68,10 @@ def run_migrations_offline() -> None:
 
 
 async def _run_async() -> None:
-    engine = create_async_engine(get_settings().database_url, poolclass=pool.NullPool)
+    # Same normalization as the app engine: accept a managed-provider URL
+    # (Neon/Supabase) by fixing the scheme + translating libpq-only params to SSL.
+    url, connect_args = async_engine_args(get_settings().database_url)
+    engine = create_async_engine(url, poolclass=pool.NullPool, connect_args=connect_args)
     async with engine.connect() as connection:
         await connection.run_sync(_do_migrations)
     await engine.dispose()
