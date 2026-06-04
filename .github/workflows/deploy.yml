@@ -1,7 +1,11 @@
 name: Deploy
 
+# Runs only after CI succeeds on main (so we never build/ship a red commit),
+# or on a manual dispatch.
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -11,6 +15,7 @@ concurrency:
 
 jobs:
   images:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
