@@ -17,7 +17,11 @@ OUTPUT = Path(__file__).resolve().parents[4] / "packages" / "contracts" / "opena
 def main() -> None:
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     schema = app.openapi()
-    OUTPUT.write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    # newline="\n" forces LF on every OS so the CI drift guard is deterministic
+    # (default write_text uses os.linesep -> CRLF on Windows, LF on Linux = false drift).
+    OUTPUT.write_text(
+        json.dumps(schema, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
+    )
     print(f"Wrote {OUTPUT}")
 
 
