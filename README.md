@@ -1,3 +1,16 @@
+---
+title: TradePulse API
+emoji: 📈
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
+<!-- The YAML block above configures the Hugging Face Spaces (Docker) deploy and
+     is ignored everywhere else. Full guide: docs/DEPLOY_FREE_CLOUD.md -->
+
 # AI-Powered Algorithmic Trading Platform
 
 A production-grade, personal-first (SaaS-ready) platform for **US equities + crypto**: market data, charting, a strategy builder, an honest event-driven backtester, paper trading, and an AI copilot. Live real-money trading is a gated, deferred phase.
