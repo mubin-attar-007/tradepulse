@@ -59,9 +59,7 @@ async def tick(key: str = Query(default="")) -> dict[str, Any]:
 
 
 @router.post("/internal/backfill", include_in_schema=False)
-async def backfill(
-    symbol: str, days: int = 2, key: str = Query(default="")
-) -> dict[str, Any]:
+async def backfill(symbol: str, days: int = 2, key: str = Query(default="")) -> dict[str, Any]:
     """Load historical 1m bars for one seeded symbol via its primary provider.
     Lets you seed history on hosts with no shell (HF Spaces). Synchronous; keep
     ``days`` small so it finishes within the host's request timeout."""
