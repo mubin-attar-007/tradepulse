@@ -1,0 +1,48 @@
+# Render Blueprint for the FREE, card-free cloud deploy.
+# New → Blueprint → pick this repo. Render builds the API from the Docker image
+# and runs migrations on each deploy. The database (Neon) and Redis (Upstash) are
+# external — set their URLs (and the other secrets marked `sync: false`) in the
+# dashboard. The Next.js web app deploys separately on Vercel (apps/web), and the
+# always-on worker is replaced by an external cron hitting /internal/tick.
+# Full walkthrough: docs/DEPLOY_FREE_CLOUD.md
+services:
+  - type: web
+    name: trading-api
+    runtime: docker
+    plan: free
+    dockerfilePath: infra/Dockerfile.api
+    dockerContext: .
+    healthCheckPath: /health
+    # Apply migrations, then serve on the port Render injects.
+    dockerCommand: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: LOG_JSON
+        value: "true"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: METRICS_ENABLED
+        value: "false"
+      - key: AI_DEFAULT_PROVIDER
+        value: gemini
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: LIVE_TRADING_ENABLED
+        value: "false"
+      # Auto-generated strong secrets:
+      - key: APP_SECRET_KEY
+        generateValue: true
+      - key: TICK_SECRET
+        generateValue: true
+      # Set these in the Render dashboard (Environment tab):
+      - key: DATABASE_URL        # Neon: postgresql+asyncpg://USER:PASS@HOST/DB?sslmode=require
+        sync: false
+      - key: REDIS_URL           # Upstash: rediss://default:PASS@HOST:6379
+        sync: false
+      - key: BROKER_CRED_KEY     # python -c "import base64,os;print(base64.b64encode(os.urandom(32)).decode())"
+        sync: false
+      - key: GEMINI_API_KEY      # your rotated free key from aistudio.google.com
+        sync: false
+      - key: CORS_ALLOW_ORIGINS  # your Vercel URL, e.g. https://your-app.vercel.app
+        sync: false

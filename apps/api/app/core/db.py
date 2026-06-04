@@ -10,6 +10,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import AsyncIterator
 from datetime import datetime
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy import ForeignKey, MetaData, func
 from sqlalchemy.ext.asyncio import (
@@ -65,11 +66,37 @@ class OwnedEntity(Base, UUIDPrimaryKey, TimestampMixin, OwnerMixin):
 _engine: AsyncEngine | None = None
 _sessionmaker: async_sessionmaker[AsyncSession] | None = None
 
+# libpq URL params that managed providers (Neon/Supabase) append but the asyncpg
+# driver does not accept as connect kwargs.
+_LIBPQ_ONLY_PARAMS = {"sslmode", "channel_binding", "target_session_attrs"}
+
+
+def _async_engine_args(raw_url: str) -> tuple[str, dict[str, object]]:
+    """Normalize a Postgres URL for asyncpg: ensure the ``+asyncpg`` scheme and
+    translate libpq-only query params (``sslmode``/``channel_binding``) — which
+    asyncpg rejects — into an SSL connect arg. A plain local URL is unchanged, so
+    this lets a Neon/Supabase connection string work by only swapping the scheme."""
+    parts = urlsplit(raw_url)
+    scheme = "postgresql+asyncpg" if parts.scheme in {"postgres", "postgresql"} else parts.scheme
+    connect_args: dict[str, object] = {}
+    kept: list[tuple[str, str]] = []
+    for key, value in parse_qsl(parts.query, keep_blank_values=True):
+        if key.lower() == "sslmode":
+            if value.lower() in {"require", "verify-ca", "verify-full", "prefer", "allow"}:
+                connect_args["ssl"] = True
+        elif key.lower() not in _LIBPQ_ONLY_PARAMS:
+            kept.append((key, value))
+    url = urlunsplit((scheme, parts.netloc, parts.path, urlencode(kept), parts.fragment))
+    return url, connect_args
+
 
 def get_engine() -> AsyncEngine:
     global _engine
     if _engine is None:
-        _engine = create_async_engine(get_settings().database_url, pool_pre_ping=True, future=True)
+        url, connect_args = _async_engine_args(get_settings().database_url)
+        _engine = create_async_engine(
+            url, pool_pre_ping=True, future=True, connect_args=connect_args
+        )
     return _engine
 
 
