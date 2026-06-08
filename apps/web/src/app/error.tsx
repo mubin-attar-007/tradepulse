@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 // Next.js 16: the recovery prop is `unstable_retry` (re-fetches + re-renders the segment),
 // not `reset`. See node_modules/next/dist/docs/.../file-conventions/error.md.
@@ -12,6 +13,8 @@ export default function Error({
   unstable_retry: () => void;
 }) {
   useEffect(() => {
+    // DSN-gated upstream: captureException is a no-op until Sentry.init runs.
+    Sentry.captureException(error);
     console.error(error);
   }, [error]);
 
