@@ -64,6 +64,15 @@ docs/                   DEPLOY runbook + Architecture Decision Records (docs/adr
 2. Money is `Decimal`/`NUMERIC` server-side; it crosses the API as decimal strings.
 3. One bar lifecycle (`forming → is_final`); decisions only ever act on closed bars.
 
+## Security & ops
+- `/metrics` is gated by `METRICS_TOKEN` (404 without it); request bodies capped at `MAX_REQUEST_BYTES`;
+  market-data provider calls bounded by `MARKET_DATA_TIMEOUT_SECONDS`.
+- DSN-gated **Sentry** on the API (`SENTRY_DSN`) and web (`NEXT_PUBLIC_SENTRY_DSN`); CSP + React error
+  boundaries on the frontend.
+- CI adds informational `pip-audit` / `npm audit` + a coverage report alongside the existing
+  mypy / import-linter / migration / OpenAPI-drift gates. Backups: `infra/backup.sh` (nightly) +
+  `infra/restore.sh` (monthly restore-verify). See [docs/](docs/).
+
 ## License
 Proprietary — © 2026 Mubin Attar. All rights reserved. Personal and commercial
 use is reserved to the owner; no third-party use without written permission.
