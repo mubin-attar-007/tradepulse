@@ -55,8 +55,11 @@ jobs:
         run: |
           uv run python -m app.cli.export_openapi
           git diff --exit-code packages/contracts/openapi.json
-      - name: Tests (pytest)
-        run: uv run pytest
+      - name: Tests (pytest + coverage report)
+        run: uv run pytest --cov=app --cov-report=term-missing
+      - name: Dependency vulnerability audit (informational)
+        run: uv run --with pip-audit pip-audit
+        continue-on-error: true
 
   frontend:
     runs-on: ubuntu-latest
@@ -71,6 +74,9 @@ jobs:
           cache: "npm"
           cache-dependency-path: apps/web/package-lock.json
       - run: npm ci
+      - name: npm audit (informational)
+        run: npm audit --audit-level=high
+        continue-on-error: true
       - name: API types drift guard (OpenAPI -> TS)
         run: |
           npm run gen:api
