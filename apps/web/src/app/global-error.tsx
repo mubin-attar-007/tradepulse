@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 // Global error boundary for the root layout. Must render its own <html>/<body>.
 // Next.js 16 recovery prop is `unstable_retry`.
@@ -12,6 +13,8 @@ export default function GlobalError({
   unstable_retry: () => void;
 }) {
   useEffect(() => {
+    // DSN-gated upstream: captureException is a no-op until Sentry.init runs.
+    Sentry.captureException(error);
     console.error(error);
   }, [error]);
 
