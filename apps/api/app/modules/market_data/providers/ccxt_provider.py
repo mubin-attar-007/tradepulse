@@ -13,6 +13,7 @@ from typing import Any
 
 import ccxt.async_support as ccxt
 
+from app.core.config import get_settings
 from app.modules.market_data.providers.base import CanonicalBar
 
 _MINUTE_MS = 60_000
@@ -36,8 +37,11 @@ def row_to_bar(row: list[Any], source: str, now_ms: int) -> CanonicalBar:
 class CcxtProvider:
     def __init__(self, exchange_id: str = "binance", *, client: Any | None = None) -> None:
         self.source = exchange_id
+        timeout_ms = int(get_settings().market_data_timeout_seconds * 1000)
         self._client = (
-            client if client is not None else getattr(ccxt, exchange_id)({"enableRateLimit": True})
+            client
+            if client is not None
+            else getattr(ccxt, exchange_id)({"enableRateLimit": True, "timeout": timeout_ms})
         )
 
     async def fetch_bars(

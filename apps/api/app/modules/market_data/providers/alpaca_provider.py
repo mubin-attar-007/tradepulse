@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
+from app.core.config import get_settings
 from app.core.errors import AppError
 from app.modules.market_data.providers.base import CanonicalBar
 
@@ -60,7 +61,10 @@ class AlpacaProvider:
     async def fetch_bars(
         self, source_symbol: str, start: datetime, end: datetime
     ) -> list[CanonicalBar]:
-        barset = await asyncio.to_thread(self._fetch, source_symbol, start, end)
+        timeout = get_settings().market_data_timeout_seconds
+        barset = await asyncio.wait_for(
+            asyncio.to_thread(self._fetch, source_symbol, start, end), timeout=timeout
+        )
         rows = barset.data.get(source_symbol, [])
         now = datetime.now(UTC)
         return [_to_bar(bar, now) for bar in rows]

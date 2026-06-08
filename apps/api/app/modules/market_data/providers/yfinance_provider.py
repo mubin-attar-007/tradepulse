@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
+from app.core.config import get_settings
 from app.modules.market_data.providers.base import CanonicalBar
 
 SOURCE = "yfinance"
@@ -49,7 +50,10 @@ class YFinanceProvider:
     async def fetch_bars(
         self, source_symbol: str, start: datetime, end: datetime
     ) -> list[CanonicalBar]:
-        df = await asyncio.to_thread(self._download, source_symbol, start, end)
+        timeout = get_settings().market_data_timeout_seconds
+        df = await asyncio.wait_for(
+            asyncio.to_thread(self._download, source_symbol, start, end), timeout=timeout
+        )
         if df is None or df.empty:
             return []
         return frame_to_bars(df, datetime.now(UTC))

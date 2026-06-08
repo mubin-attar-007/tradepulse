@@ -14,6 +14,7 @@ from argon2.exceptions import InvalidHashError, VerifyMismatchError
 from fastapi import Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from app.core.config import get_settings
 
@@ -95,3 +96,47 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if get_settings().is_production:
             headers.setdefault("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
         return response
+
+
+class MetricsGuardMiddleware(BaseHTTPMiddleware):
+    """Protect the Prometheus ``/metrics`` endpoint with a bearer token.
+
+    Returns 404 (not 401, to avoid advertising the endpoint) when no METRICS_TOKEN is
+    configured or the presented token is wrong. The scraper sends
+    ``Authorization: Bearer <token>`` (or ``?token=``).
+    """
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        if request.url.path == "/metrics":
+            token = get_settings().metrics_token
+            auth = request.headers.get("authorization", "")
+            presented = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
+            if not presented:
+                presented = request.query_params.get("token", "")
+            if not token or not secrets.compare_digest(presented, token):
+                return Response(status_code=404)
+        return await call_next(request)
+
+
+class BodySizeLimitMiddleware(BaseHTTPMiddleware):
+    """Reject requests whose declared Content-Length exceeds the configured limit (413)."""
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        content_length = request.headers.get("content-length")
+        if content_length is not None:
+            try:
+                too_large = int(content_length) > get_settings().max_request_bytes
+            except ValueError:
+                too_large = False
+            if too_large:
+                return JSONResponse(
+                    status_code=413,
+                    media_type="application/problem+json",
+                    content={
+                        "type": "about:blank#payload_too_large",
+                        "title": "Payload Too Large",
+                        "status": 413,
+                        "detail": "Request body exceeds the maximum allowed size.",
+                    },
+                )
+        return await call_next(request)
