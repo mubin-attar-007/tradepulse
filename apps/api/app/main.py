@@ -22,7 +22,11 @@ from app.core.middleware import RequestContextMiddleware
 from app.core.observability import init_sentry
 from app.core.ratelimit import RateLimitMiddleware
 from app.core.redis import close_redis, get_redis_client
-from app.core.security import SecurityHeadersMiddleware
+from app.core.security import (
+    BodySizeLimitMiddleware,
+    MetricsGuardMiddleware,
+    SecurityHeadersMiddleware,
+)
 from app.modules.ai.router import router as ai_router
 from app.modules.auth.router import router as auth_router
 from app.modules.backtesting.router import router as backtests_router
@@ -60,8 +64,10 @@ def create_app() -> FastAPI:
     )
     install_error_handlers(app)
 
-    # Added inner->outer; execution order becomes CORS -> RequestContext -> RateLimit -> Security.
+    # Added inner->outer; CORS is added last so it stays outermost (even 4xx carry CORS headers).
     app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(MetricsGuardMiddleware)
+    app.add_middleware(BodySizeLimitMiddleware)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(

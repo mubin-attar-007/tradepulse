@@ -45,10 +45,13 @@ class Settings(BaseSettings):
 
     # --- Rate limiting ---
     rate_limit_per_minute: int = 120
+    max_request_bytes: int = 2_000_000  # reject larger request bodies with 413 (DoS guard)
 
     # --- Observability ---
     sentry_dsn: str = ""
     metrics_enabled: bool = True
+    # Bearer token required to scrape /metrics. Empty → /metrics returns 404 (fail-closed).
+    metrics_token: str = ""
 
     # --- AI (Phase 6): both options are free — Gemini free tier, or local Ollama ---
     gemini_api_key: str = ""
@@ -59,6 +62,7 @@ class Settings(BaseSettings):
     # --- Market data / brokers ---
     alpaca_api_key: str = ""
     alpaca_api_secret: str = ""
+    market_data_timeout_seconds: float = 30.0  # bound external provider calls (anti-DoS)
 
     # --- Live trading (gated; real money OFF by default) ---
     live_trading_enabled: bool = False
