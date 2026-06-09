@@ -11,6 +11,11 @@ updates:
     groups:
       python-deps:
         patterns: ["*"]
+    ignore:
+      # redis is capped <6 by arq (the task queue: arq 0.28 requires redis[hiredis]>=4.2,<6).
+      # Don't propose redis MAJOR bumps until arq supports them — otherwise the group can't resolve.
+      - dependency-name: "redis"
+        update-types: ["version-update:semver-major"]
 
   # Next.js frontend
   - package-ecosystem: "npm"
