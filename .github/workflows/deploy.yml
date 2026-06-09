@@ -18,17 +18,17 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       # Container registries require lowercase names; the repo slug has uppercase.
       - name: Lowercase image prefix
         run: echo "IMAGE_PREFIX=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build + push API image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: infra/Dockerfile.api
@@ -37,7 +37,7 @@ jobs:
             ${{ env.IMAGE_PREFIX }}/api:latest
             ${{ env.IMAGE_PREFIX }}/api:${{ github.sha }}
       - name: Build + push web image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: apps/web
           file: infra/Dockerfile.web
