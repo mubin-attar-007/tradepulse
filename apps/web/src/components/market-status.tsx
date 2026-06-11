@@ -36,7 +36,7 @@ export function MarketStatus() {
   return (
     <span className="hidden items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground lg:flex">
       <span
-        className={`h-1.5 w-1.5 rounded-full ${open ? "animate-pulse bg-profit" : "bg-muted-foreground"}`}
+        className={`h-1.5 w-1.5 rounded-full motion-reduce:animate-none ${open ? "animate-pulse bg-profit" : "bg-muted-foreground"}`}
       />
       Crypto 24/7 · Equities {open === null ? "—" : open ? "open" : "closed"}
     </span>

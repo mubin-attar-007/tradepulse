@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { api, ApiError } from "@/lib/api/client";
+import { onThemeChange, readChartTheme, type ChartTheme } from "@/lib/chart-theme";
+import { formatSigned } from "@/lib/utils";
 
 type Trade = {
   entry_ts: string;
@@ -48,14 +50,18 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
 
   useEffect(() => {
     if (!ref.current || !result.equity_curve?.length) return;
+    const layoutOptions = (theme: ChartTheme) => ({
+      layout: { background: { color: "transparent" }, textColor: theme.text },
+      grid: { vertLines: { color: theme.grid }, horzLines: { color: theme.grid } },
+      rightPriceScale: { borderColor: theme.border },
+    });
+    const theme = readChartTheme();
     const chart: IChartApi = createChart(ref.current, {
       autoSize: true,
-      layout: { background: { color: "transparent" }, textColor: "#8b949e" },
-      grid: { vertLines: { color: "#1a212b" }, horzLines: { color: "#1a212b" } },
       timeScale: { timeVisible: true, secondsVisible: false },
-      rightPriceScale: { borderColor: "#232a34" },
+      ...layoutOptions(theme),
     });
-    const series = chart.addSeries(LineSeries, { color: "#3b82f6", lineWidth: 2 });
+    const series = chart.addSeries(LineSeries, { color: theme.line, lineWidth: 2 });
     series.setData(
       result.equity_curve.map((p) => ({
         time: Math.floor(Date.parse(p.ts) / 1000) as UTCTimestamp,
@@ -63,7 +69,15 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
       })),
     );
     chart.timeScale().fitContent();
-    return () => chart.remove();
+    const unsubscribe = onThemeChange(() => {
+      const next = readChartTheme();
+      chart.applyOptions(layoutOptions(next));
+      series.applyOptions({ color: next.line });
+    });
+    return () => {
+      unsubscribe();
+      chart.remove();
+    };
   }, [result]);
 
   async function explain() {
@@ -98,7 +112,7 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
         ))}
       </div>
 
-      <div ref={ref} className="h-[360px] w-full rounded-lg border border-border bg-card" />
+      <div ref={ref} className="h-[260px] w-full rounded-lg border border-border bg-card md:h-[360px]" />
 
       <div>
         <Button variant="outline" size="sm" onClick={explain} disabled={loadingExplain}>
@@ -112,7 +126,7 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
       </div>
 
       {result.trades?.length ? (
-        <div className="overflow-hidden rounded-lg border border-border">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead className="bg-card text-left text-muted-foreground">
               <tr>
@@ -140,14 +154,14 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
                         Number(t.pnl) >= 0 ? "text-profit" : "text-loss"
                       }`}
                     >
-                      {Number(t.pnl).toFixed(2)}
+                      {formatSigned(Number(t.pnl))}
                     </td>
                     <td
                       className={`px-3 py-1.5 text-right tabular-nums ${
                         t.return_pct >= 0 ? "text-profit" : "text-loss"
                       }`}
                     >
-                      {(t.return_pct * 100).toFixed(2)}%
+                      {formatSigned(t.return_pct * 100, "%")}
                     </td>
                     <td className="px-3 py-1.5 text-muted-foreground">{t.exit_reason}</td>
                   </tr>

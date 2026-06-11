@@ -10,6 +10,11 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_PATHS = ["/", "/login"];
 const SESSION_COOKIES = ["session", "__Host-session"];
 
+/** Only honor same-origin relative paths ("//host" and "/\host" are open redirects). */
+function isSafeNext(next: string | null): next is string {
+  return next !== null && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\");
+}
+
 export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -18,16 +23,22 @@ export function proxy(request: NextRequest): NextResponse {
   if (!isPublic && !hasSession) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
+    // Remember where the user was headed so login can return them there.
+    if (pathname !== "/") url.searchParams.set("next", pathname + request.nextUrl.search);
     return NextResponse.redirect(url);
   }
   if (isPublic && hasSession) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
+    const next = request.nextUrl.searchParams.get("next");
+    return NextResponse.redirect(
+      new URL(isSafeNext(next) ? next : "/dashboard", request.nextUrl),
+    );
   }
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.svg).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|robots.txt|sitemap.xml|.*\\.svg).*)",
+  ],
 };

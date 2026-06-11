@@ -30,7 +30,7 @@
   --card-foreground: #e7ebf0;
   --elevated: #141b25;
   --muted: #161d28;
-  --muted-foreground: #7d8694;
+  --muted-foreground: #8b95a4;
   --border: #1e2632;
   --input: #1e2632;
   --ring: #4f8cff;
@@ -51,7 +51,7 @@
   --card-foreground: #0b0f17;
   --elevated: #ffffff;
   --muted: #eef1f6;
-  --muted-foreground: #5b6571;
+  --muted-foreground: #525c69;
   --border: #e4e8ee;
   --input: #e4e8ee;
   --ring: #2f6bf0;
@@ -130,6 +130,16 @@ body {
   transform: translateX(-100%);
   background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
   animation: shimmer 1.4s infinite;
+}
+
+/* Respect OS-level reduced-motion: no fade-up entrances, no skeleton shimmer. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up {
+    animation: none;
+  }
+  .skeleton::after {
+    animation: none;
+  }
 }
 
 /* --- Scrollbar --- */

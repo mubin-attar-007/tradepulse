@@ -12,6 +12,7 @@ import {
 import { useEffect, useRef } from "react";
 
 import { api, type Bar } from "@/lib/api/client";
+import { onThemeChange, readChartTheme, type ChartTheme } from "@/lib/chart-theme";
 import { type LiveBar, useMarketSocket } from "@/lib/market/use-market-socket";
 
 function toTime(iso: string): UTCTimestamp {
@@ -40,24 +41,36 @@ export function ChartWorkspace({ instrumentId }: { instrumentId: string }) {
     queryFn: () => api.bars(instrumentId, "1m"),
   });
 
-  // Create the chart once.
+  // Create the chart once; recolor in place when the theme class on <html> flips.
   useEffect(() => {
     if (!containerRef.current) return;
+    const layoutOptions = (theme: ChartTheme) => ({
+      layout: { background: { color: "transparent" }, textColor: theme.text },
+      grid: { vertLines: { color: theme.grid }, horzLines: { color: theme.grid } },
+      rightPriceScale: { borderColor: theme.border },
+    });
+    const candleOptions = (theme: ChartTheme) => ({
+      upColor: theme.up,
+      downColor: theme.down,
+      borderVisible: false,
+      wickUpColor: theme.up,
+      wickDownColor: theme.down,
+    });
+    const theme = readChartTheme();
     const chart: IChartApi = createChart(containerRef.current, {
       autoSize: true,
-      layout: { background: { color: "transparent" }, textColor: "#8b949e" },
-      grid: { vertLines: { color: "#1a212b" }, horzLines: { color: "#1a212b" } },
       timeScale: { timeVisible: true, secondsVisible: false },
-      rightPriceScale: { borderColor: "#232a34" },
+      ...layoutOptions(theme),
     });
-    seriesRef.current = chart.addSeries(CandlestickSeries, {
-      upColor: "#16c784",
-      downColor: "#ea3943",
-      borderVisible: false,
-      wickUpColor: "#16c784",
-      wickDownColor: "#ea3943",
+    const series = chart.addSeries(CandlestickSeries, candleOptions(theme));
+    seriesRef.current = series;
+    const unsubscribe = onThemeChange(() => {
+      const next = readChartTheme();
+      chart.applyOptions(layoutOptions(next));
+      series.applyOptions(candleOptions(next));
     });
     return () => {
+      unsubscribe();
       chart.remove();
       seriesRef.current = null;
     };
@@ -89,7 +102,10 @@ export function ChartWorkspace({ instrumentId }: { instrumentId: string }) {
           {instrument?.name ? `${instrument.name} · ` : ""}1m{isLoading ? " · loading…" : ""}
         </span>
       </div>
-      <div ref={containerRef} className="h-[520px] w-full rounded-lg border border-border bg-card" />
+      <div
+        ref={containerRef}
+        className="h-[320px] w-full rounded-lg border border-border bg-card sm:h-[420px] md:h-[520px]"
+      />
     </div>
   );
 }

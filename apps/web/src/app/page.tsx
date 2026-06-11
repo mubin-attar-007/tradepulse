@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 const FEATURES = [
@@ -59,7 +60,7 @@ export default function LandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-2.5">
             <div className="h-6 w-6 rounded-md gradient-brand" />
-            <span className="font-semibold tracking-tight">Quanta</span>
+            <span className="font-semibold tracking-tight">{BRAND_NAME}</span>
           </div>
           <nav className="flex items-center gap-2">
             <Link
@@ -80,7 +81,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-6 pb-16 pt-20 text-center md:pt-28">
           <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground animate-fade-up">
             <Sparkles size={13} className="text-primary" />
-            AI-Powered Trading Intelligence
+            {BRAND_TAGLINE}
           </div>
           <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-semibold leading-[1.1] tracking-tight md:text-6xl animate-fade-up">
             Build, analyze &amp; automate
@@ -203,7 +204,7 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-muted-foreground sm:flex-row">
           <div className="flex items-center gap-2">
             <div className="h-4 w-4 rounded gradient-brand" />
-            Quanta
+            {BRAND_NAME}
           </div>
           <div>Not investment advice. For research &amp; education.</div>
         </div>
