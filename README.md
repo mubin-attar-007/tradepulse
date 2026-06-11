@@ -13,6 +13,8 @@ pinned: false
 
 # AI-Powered Algorithmic Trading Platform
 
+**🔗 Live demo → [ai-powered-trading-system.vercel.app](https://ai-powered-trading-system.vercel.app)**  ·  API: [Hugging Face Space](https://mubin-attar-007-tradepulse.hf.space)
+
 A production-grade, personal-first (SaaS-ready) platform for **US equities + crypto**: market data, charting, a strategy builder, an honest event-driven backtester, paper trading, and an AI copilot. Live real-money trading is a gated, deferred phase.
 
 > Greenfield rebuild. Full architecture & roadmap: see the approved plan file.
