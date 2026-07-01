@@ -1,16 +1,3 @@
----
-title: TradePulse API
-emoji: 📈
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 7860
-pinned: false
----
-
-<!-- The YAML block above configures the Hugging Face Spaces (Docker) deploy and
-     is ignored everywhere else. Full guide: docs/DEPLOY_FREE_CLOUD.md -->
-
 <div align="center">
 
 # 📈 TradePulse
