@@ -11,13 +11,36 @@ pinned: false
 <!-- The YAML block above configures the Hugging Face Spaces (Docker) deploy and
      is ignored everywhere else. Full guide: docs/DEPLOY_FREE_CLOUD.md -->
 
-# AI-Powered Algorithmic Trading Platform
+<div align="center">
 
-**🔗 Live demo → [ai-powered-trading-system.vercel.app](https://ai-powered-trading-system.vercel.app)**  ·  API: [Hugging Face Space](https://mubin-attar-007-tradepulse.hf.space)
+# 📈 TradePulse
 
-A production-grade, personal-first (SaaS-ready) platform for **US equities + crypto**: market data, charting, a strategy builder, an honest event-driven backtester, paper trading, and an AI copilot. Live real-money trading is a gated, deferred phase.
+### AI-powered algorithmic trading intelligence — US equities + crypto.
 
-> Greenfield rebuild. Full architecture & roadmap: see the approved plan file.
+Live market data, interactive charts, a strategy builder, an **honest event-driven backtester**,
+paper trading, and an **AI copilot** (NL → strategy) — a production-grade, SaaS-ready platform.
+*(Live real-money trading is a gated, deferred phase.)*
+
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-online-3b82f6?style=for-the-badge)](https://ai-powered-trading-system.vercel.app)
+&nbsp;
+[![API](https://img.shields.io/badge/API-Swagger-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://mubin-attar-007-tradepulse.hf.space)
+
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-000000?logo=next.js&logoColor=white)
+![TimescaleDB](https://img.shields.io/badge/TimescaleDB-Postgres-4169E1?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis_+_ARQ-DC382D?logo=redis&logoColor=white)
+
+<br/>
+
+<img src="docs/assets/screenshot.png" alt="TradePulse — AI-powered trading intelligence" width="100%"/>
+
+</div>
+
+---
+
+A production-grade, personal-first (SaaS-ready) platform for **US equities + crypto**: market data,
+charting, a strategy builder, an honest event-driven backtester, paper trading, and an AI copilot.
 
 ## Stack
 - **Backend:** Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2.0 (async), Alembic, ARQ
