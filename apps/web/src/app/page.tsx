@@ -64,6 +64,15 @@ export default function LandingPage() {
           </div>
           <nav className="flex items-center gap-2">
             <Link
+              href="/methodology"
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "hidden sm:inline-flex",
+              )}
+            >
+              How it works
+            </Link>
+            <Link
               href="/login"
               className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
             >
@@ -180,7 +189,12 @@ export default function LandingPage() {
             <div className="h-4 w-4 rounded gradient-brand" />
             {BRAND_NAME}
           </div>
-          <div>Not investment advice. For research &amp; education.</div>
+          <div className="flex items-center gap-4">
+            <Link href="/methodology" className="transition-colors hover:text-foreground">
+              Methodology
+            </Link>
+            <span>Not investment advice. For research &amp; education.</span>
+          </div>
         </div>
       </footer>
     </div>

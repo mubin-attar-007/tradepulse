@@ -7,6 +7,7 @@ import {
   type IChartApi,
   type UTCTimestamp,
 } from "lightweight-charts";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -194,7 +195,11 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
       </div>
       <p className="text-[11px] leading-relaxed text-muted-foreground">
         Returns are net of modeled costs — commission 2&nbsp;bps/side + slippage 1&nbsp;bps. Sharpe
-        &amp; Sortino are annualized with a risk-free rate of 0.
+        &amp; Sortino are annualized with a risk-free rate of 0.{" "}
+        <Link href="/methodology" className="underline underline-offset-2 hover:text-foreground">
+          How these numbers are computed
+        </Link>
+        .
       </p>
 
       <div className="space-y-1">

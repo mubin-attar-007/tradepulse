@@ -10,7 +10,7 @@ paper trading, and an **AI copilot** (NL → strategy) — a production-grade, S
 
 [![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-online-3b82f6?style=for-the-badge)](https://ai-powered-trading-system.vercel.app)
 &nbsp;
-[![API](https://img.shields.io/badge/API-Swagger-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://mubin-attar-007-tradepulse.hf.space)
+[![Methodology](https://img.shields.io/badge/Methodology-transparency-009688?style=for-the-badge)](https://ai-powered-trading-system.vercel.app/methodology)
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
@@ -75,6 +75,26 @@ docs/                   DEPLOY runbook + Architecture Decision Records (docs/adr
 1. Every domain row is `owner_id`-scoped (SaaS-ready tenancy).
 2. Money is `Decimal`/`NUMERIC` server-side; it crosses the API as decimal strings.
 3. One bar lifecycle (`forming → is_final`); decisions only ever act on closed bars.
+
+## Methodology & honest limits
+Credibility comes from transparency, not cherry-picked numbers. What's genuinely real today:
+- **Backtests are look-ahead-free** — event-driven bar replay; orders fill at the *next* bar's open,
+  never the signal bar's close. Every run is reproducible (spec hash + engine version + data fingerprint).
+- **Costs modeled by default** — commission 2 bps/side + 1 bps slippage on every fill; reported returns
+  are net of costs, and total commission is shown alongside each result.
+- **Risk controls are enforced** — position caps, max-daily-loss halt, consecutive-loss limits; each
+  risk event is recorded on the result.
+- **Honest reporting** — drawdown always shown; Sharpe/Sortino annualized with a risk-free rate of 0
+  (stated wherever they appear); every backtest/paper result carries a hypothetical-performance notice.
+- **Data provenance** — prices are polled (~30s) and labeled `DELAYED`; no real-time SIP claim.
+- **Grounded AI copilot** — generates a validated spec, never auto-executes, instructed to use only the
+  numbers present (refuses rather than invents), and always closes with a not-investment-advice note.
+
+**Deliberately *not* claimed (roadmap, not faked in the UI):** a real-time consolidated (SIP) feed;
+survivorship-free / point-in-time fundamentals; an automatic in-sample/out-of-sample split;
+Deflated-Sharpe / multiple-testing correction; a buy-and-hold benchmark overlay (the price series
+isn't yet exposed to the client). See the in-app
+[Methodology page](https://ai-powered-trading-system.vercel.app/methodology).
 
 ## Security & ops
 - `/metrics` is gated by `METRICS_TOKEN` (404 without it); request bodies capped at `MAX_REQUEST_BYTES`;

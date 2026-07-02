@@ -7,7 +7,11 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/login"];
+// Reachable without a session.
+const PUBLIC_PATHS = ["/", "/login", "/methodology"];
+// The subset that logged-in users should be bounced away from (login / marketing entry) into the
+// app. Open docs like /methodology stay viewable whether or not you're signed in.
+const AUTHED_REDIRECT_PATHS = ["/", "/login"];
 const SESSION_COOKIES = ["session", "__Host-session"];
 
 /** Only honor same-origin relative paths ("//host" and "/\host" are open redirects). */
@@ -18,6 +22,9 @@ function isSafeNext(next: string | null): next is string {
 export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const bounceWhenAuthed = AUTHED_REDIRECT_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
   const hasSession = SESSION_COOKIES.some((c) => request.cookies.has(c));
 
   if (!isPublic && !hasSession) {
@@ -28,7 +35,7 @@ export function proxy(request: NextRequest): NextResponse {
     if (pathname !== "/") url.searchParams.set("next", pathname + request.nextUrl.search);
     return NextResponse.redirect(url);
   }
-  if (isPublic && hasSession) {
+  if (bounceWhenAuthed && hasSession) {
     const next = request.nextUrl.searchParams.get("next");
     return NextResponse.redirect(
       new URL(isSafeNext(next) ? next : "/dashboard", request.nextUrl),
