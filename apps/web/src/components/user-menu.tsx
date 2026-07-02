@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,13 @@ export function UserMenu() {
 
   return (
     <div className="flex items-center gap-3">
-      <span className="text-sm text-muted-foreground">{user?.email ?? "…"}</span>
+      <Link
+        href="/account"
+        className="text-sm text-muted-foreground hover:text-foreground"
+        title={user?.email ?? undefined}
+      >
+        {user?.email ?? "…"}
+      </Link>
       <Button variant="outline" size="sm" onClick={logout}>
         Log out
       </Button>

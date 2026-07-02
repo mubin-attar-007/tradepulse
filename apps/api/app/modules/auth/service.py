@@ -6,6 +6,8 @@ existence via response timing.
 
 from __future__ import annotations
 
+import uuid
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -51,3 +53,36 @@ class AuthService:
         if needs_rehash(cred.password_hash):
             cred.password_hash = hash_password(password)
         return user
+
+    async def _credential(self, user_id: uuid.UUID) -> UserCredential | None:
+        return await self.session.scalar(
+            select(UserCredential).where(UserCredential.user_id == user_id)
+        )
+
+    async def verify_current_password(self, user_id: uuid.UUID, password: str) -> bool:
+        cred = await self._credential(user_id)
+        return cred is not None and verify_password(cred.password_hash, password)
+
+    async def change_password(self, user_id: uuid.UUID, current: str, new: str) -> None:
+        cred = await self._credential(user_id)
+        if cred is None or not verify_password(cred.password_hash, current):
+            raise AuthenticationError("Your current password is incorrect.")
+        cred.password_hash = hash_password(new)
+        await self.session.flush()
+
+    async def set_password(self, user_id: uuid.UUID, new: str) -> None:
+        cred = await self._credential(user_id)
+        if cred is not None:
+            cred.password_hash = hash_password(new)
+            await self.session.flush()
+
+    async def get_by_email(self, email: str) -> User | None:
+        return await self.session.scalar(select(User).where(User.email == email.strip().lower()))
+
+    async def deactivate(self, user_id: uuid.UUID) -> None:
+        """Soft-delete: deactivate the account. `get_current_user` rejects inactive users, so this
+        locks them out immediately and is FK-safe (no cascade of owned rows)."""
+        user = await self.session.get(User, user_id)
+        if user is not None:
+            user.is_active = False
+            await self.session.flush()

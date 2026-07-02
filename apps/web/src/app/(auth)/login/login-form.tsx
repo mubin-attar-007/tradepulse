@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -82,6 +83,14 @@ export function LoginForm() {
             {loading ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
           </Button>
         </form>
+        {mode === "login" ? (
+          <Link
+            href="/forgot-password"
+            className="mt-3 block text-sm text-muted-foreground hover:text-foreground"
+          >
+            Forgot password?
+          </Link>
+        ) : null}
         <button
           type="button"
           onClick={() => {

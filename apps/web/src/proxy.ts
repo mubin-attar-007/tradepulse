@@ -8,7 +8,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 // Reachable without a session.
-const PUBLIC_PATHS = ["/", "/login", "/methodology"];
+const PUBLIC_PATHS = ["/", "/login", "/methodology", "/forgot-password", "/reset-password"];
 // The subset that logged-in users should be bounced away from (login / marketing entry) into the
 // app. Open docs like /methodology stay viewable whether or not you're signed in.
 const AUTHED_REDIRECT_PATHS = ["/", "/login"];

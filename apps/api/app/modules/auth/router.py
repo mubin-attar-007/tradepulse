@@ -5,7 +5,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response
 from starlette.requests import Request
 
+from app.core.config import get_settings
 from app.core.deps import RedisDep, SessionDep
+from app.core.email import send_email
+from app.core.errors import AuthenticationError
 from app.core.ratelimit import enforce_rate_limit
 from app.core.security import (
     clear_session_cookie,
@@ -16,7 +19,16 @@ from app.core.security import (
 )
 from app.modules.audit import service as audit
 from app.modules.auth.deps import CurrentUser, csrf_protect
-from app.modules.auth.schemas import LoginRequest, RegisterRequest, UserOut
+from app.modules.auth.reset import consume_reset_token, create_reset_token
+from app.modules.auth.schemas import (
+    ChangePasswordRequest,
+    DeleteAccountRequest,
+    LoginRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
+    RegisterRequest,
+    UserOut,
+)
 from app.modules.auth.service import AuthService
 from app.modules.auth.sessions import create_session, revoke_session
 
@@ -100,3 +112,77 @@ async def logout(
 @router.get("/me", response_model=UserOut)
 async def me(user: CurrentUser) -> UserOut:
     return UserOut.model_validate(user)
+
+
+@router.post("/change-password", dependencies=[Depends(csrf_protect)])
+async def change_password(
+    payload: ChangePasswordRequest,
+    request: Request,
+    session: SessionDep,
+    redis: RedisDep,
+    user: CurrentUser,
+) -> dict[str, str]:
+    await enforce_rate_limit(redis, f"pwchange:{user.id}", limit=10, window=60)
+    await AuthService(session).change_password(
+        user.id, payload.current_password, payload.new_password
+    )
+    await audit.record(
+        session, action="user.change_password", actor_id=user.id, ip=_client_ip(request)
+    )
+    return {"status": "ok"}
+
+
+@router.post("/delete", dependencies=[Depends(csrf_protect)])
+async def delete_account(
+    payload: DeleteAccountRequest,
+    request: Request,
+    response: Response,
+    session: SessionDep,
+    redis: RedisDep,
+    user: CurrentUser,
+) -> dict[str, str]:
+    svc = AuthService(session)
+    if not await svc.verify_current_password(user.id, payload.password):
+        raise AuthenticationError("Password is incorrect.")
+    await svc.deactivate(user.id)
+    await audit.record(session, action="user.delete", actor_id=user.id, ip=_client_ip(request))
+    token = request.cookies.get(session_cookie_name())
+    if token:
+        await revoke_session(redis, token)
+    clear_session_cookie(response)
+    return {"status": "ok"}
+
+
+@router.post("/password-reset")
+async def password_reset(
+    payload: PasswordResetRequest,
+    request: Request,
+    session: SessionDep,
+    redis: RedisDep,
+) -> dict[str, str]:
+    """Start a reset. Always a generic 200 (no account enumeration); emails a link when real."""
+    await enforce_rate_limit(redis, f"pwreset:{_client_ip(request)}", limit=5, window=300)
+    user = await AuthService(session).get_by_email(payload.email)
+    if user is not None and user.is_active:
+        token = await create_reset_token(redis, user.id)
+        reset_url = f"{get_settings().frontend_url.rstrip('/')}/reset-password?token={token}"
+        await send_email(
+            user.email,
+            "Reset your TradePulse password",
+            "Reset your TradePulse password with this link (expires in 30 minutes):\n\n"
+            f"{reset_url}\n\nIf you didn't request this, you can safely ignore this email.",
+        )
+    return {"status": "ok"}
+
+
+@router.post("/password-reset-confirm")
+async def password_reset_confirm(
+    payload: PasswordResetConfirm,
+    session: SessionDep,
+    redis: RedisDep,
+) -> dict[str, str]:
+    user_id = await consume_reset_token(redis, payload.token)
+    if user_id is None:
+        raise AuthenticationError("This reset link is invalid or has expired.")
+    await AuthService(session).set_password(user_id, payload.new_password)
+    return {"status": "ok"}

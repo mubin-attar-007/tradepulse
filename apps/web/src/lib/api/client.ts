@@ -69,6 +69,26 @@ export const api = {
       body: JSON.stringify({ email, password, display_name }),
     }),
   logout: () => apiFetch<{ status: string }>("/auth/logout", { method: "POST" }),
+  changePassword: (current_password: string, new_password: string) =>
+    apiFetch<{ status: string }>("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ current_password, new_password }),
+    }),
+  deleteAccount: (password: string) =>
+    apiFetch<{ status: string }>("/auth/delete", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }),
+  passwordReset: (email: string) =>
+    apiFetch<{ status: string }>("/auth/password-reset", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  passwordResetConfirm: (token: string, new_password: string) =>
+    apiFetch<{ status: string }>("/auth/password-reset-confirm", {
+      method: "POST",
+      body: JSON.stringify({ token, new_password }),
+    }),
 
   instruments: (assetClass?: string) =>
     apiFetch<Instrument[]>(

@@ -38,6 +38,15 @@ class Settings(BaseSettings):
 
     # --- CORS (credentialed allowlist; NEVER a wildcard) ---
     cors_allow_origins: str = "http://localhost:3000"
+    # Base URL of the deployed frontend (used to build password-reset links in email).
+    frontend_url: str = "http://localhost:3000"
+
+    # --- Email for password reset (unset => link is logged; set for real Gmail SMTP delivery) ---
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str = ""  # Gmail address — enables real delivery
+    smtp_password: str = ""  # Google App Password (16 chars) — see .env.example
+    email_from: str = ""  # From-address; defaults to smtp_user
 
     # --- Infra ---
     database_url: str = "postgresql+asyncpg://trading:trading@localhost:5432/trading"
