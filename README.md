@@ -8,9 +8,9 @@ Live market data, interactive charts, a strategy builder, an **honest event-driv
 paper trading, and an **AI copilot** (NL → strategy) — a production-grade, SaaS-ready platform.
 *(Live real-money trading is a gated, deferred phase.)*
 
-[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-online-3b82f6?style=for-the-badge)](https://ai-powered-trading-system.vercel.app)
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-online-3b82f6?style=for-the-badge)](https://tradepulse.vercel.app)
 &nbsp;
-[![Methodology](https://img.shields.io/badge/Methodology-transparency-009688?style=for-the-badge)](https://ai-powered-trading-system.vercel.app/methodology)
+[![Methodology](https://img.shields.io/badge/Methodology-transparency-009688?style=for-the-badge)](https://tradepulse.vercel.app/methodology)
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
@@ -94,7 +94,7 @@ Credibility comes from transparency, not cherry-picked numbers. What's genuinely
 survivorship-free / point-in-time fundamentals; an automatic in-sample/out-of-sample split;
 Deflated-Sharpe / multiple-testing correction; a buy-and-hold benchmark overlay (the price series
 isn't yet exposed to the client). See the in-app
-[Methodology page](https://ai-powered-trading-system.vercel.app/methodology).
+[Methodology page](https://tradepulse.vercel.app/methodology).
 
 ## Security & ops
 - `/metrics` is gated by `METRICS_TOKEN` (404 without it); request bodies capped at `MAX_REQUEST_BYTES`;

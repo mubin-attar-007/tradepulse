@@ -13,7 +13,7 @@ Managed free-tier deploy: **Neon** (Postgres) + **Upstash** (Redis) +
 > *(A `render.yaml` is also included if you ever use Render with a card.)*
 
 ## Part A — Publish to GitHub (done)
-At `github.com/mubin-attar-007/AI-Powered-Trading-System`. **Sync** the latest
+At `github.com/mubin-attar-007/tradepulse`. **Sync** the latest
 commits so the code you push to HF is current.
 
 ## Part B — Rotate your Gemini key (before deploy)

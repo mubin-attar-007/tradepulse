@@ -99,8 +99,8 @@ echo "Host github.com
   IdentityFile ~/.ssh/gh_deploy
   StrictHostKeyChecking accept-new" >> ~/.ssh/config
 
-git clone git@github.com:mubin-attar-007/AI-Powered-Trading-System.git
-cd AI-Powered-Trading-System
+git clone git@github.com:mubin-attar-007/tradepulse.git
+cd tradepulse
 ```
 
 ---
@@ -154,7 +154,7 @@ Open **https://mubintrade.duckdns.org** in your browser → register an account 
 
 ## Part 8 — Updates, rollback, logs
 ```bash
-cd ~/AI-Powered-Trading-System
+cd ~/tradepulse
 git pull && bash infra/deploy.sh         # deploy the latest main
 docker compose -f infra/compose.prod.yaml --env-file infra/.env.prod logs -f --tail=100
 git checkout <old-sha> && bash infra/deploy.sh   # roll back
