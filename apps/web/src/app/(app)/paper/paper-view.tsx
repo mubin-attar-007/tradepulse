@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { PlayCircle } from "lucide-react";
 import Link from "next/link";
 
+import { HypotheticalBanner } from "@/components/hypothetical-banner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api/client";
@@ -30,6 +31,8 @@ export function PaperView() {
           <span className="rounded bg-muted px-1.5 py-0.5 text-xs uppercase">Paper</span>
         </p>
       </div>
+
+      <HypotheticalBanner kind="paper" />
 
       {isLoading ? (
         <div className="space-y-3">

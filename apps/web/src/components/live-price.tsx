@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { DataBadge } from "@/components/data-badge";
 import { api } from "@/lib/api/client";
 
 /**
@@ -11,7 +12,7 @@ import { api } from "@/lib/api/client";
  * rendered, never computed on (the API sends it as a decimal string).
  */
 export function LivePrice({ instrumentId }: { instrumentId: string }) {
-  const { data, isError } = useQuery({
+  const { data, isError, dataUpdatedAt } = useQuery({
     queryKey: ["latest", instrumentId],
     queryFn: () => api.latest(instrumentId),
     refetchInterval: 30_000, // matches the worker's 30s poll cadence
@@ -20,8 +21,14 @@ export function LivePrice({ instrumentId }: { instrumentId: string }) {
 
   if (isError || !data) return <span className="text-muted-foreground">—</span>;
   return (
-    <span className="tabular-nums">
-      ${Number(data.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+    <span className="inline-flex items-center gap-1.5">
+      <span className="tabular-nums">
+        ${Number(data.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+      </span>
+      <DataBadge
+        kind="DELAYED"
+        title={`Polled every 30s and may be delayed. Last updated ${new Date(dataUpdatedAt).toLocaleTimeString()}.`}
+      />
     </span>
   );
 }

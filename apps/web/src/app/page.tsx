@@ -103,48 +103,22 @@ export default function LandingPage() {
               Launch app
             </Link>
           </div>
+          <p className="mt-4 text-xs text-muted-foreground animate-fade-up">
+            Not investment advice · For research &amp; education
+          </p>
 
-          {/* Preview card */}
-          <div className="mx-auto mt-14 max-w-3xl rounded-2xl border border-border glass p-2 animate-fade-up">
-            <div className="rounded-xl border border-border bg-card p-5 text-left">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">BTC/USD · Composite strategy</div>
-                <span className="rounded-full bg-profit/10 px-2 py-0.5 text-xs font-medium text-profit">
-                  +18.4% · Sharpe 1.7
-                </span>
-              </div>
-              <svg viewBox="0 0 600 120" className="mt-4 h-28 w-full" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="eq" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#4f8cff" stopOpacity="0.35" />
-                    <stop offset="100%" stopColor="#4f8cff" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <path
-                  d="M0 96 L60 88 L120 92 L180 70 L240 78 L300 54 L360 60 L420 38 L480 44 L540 22 L600 28 V120 H0 Z"
-                  fill="url(#eq)"
-                />
-                <path
-                  d="M0 96 L60 88 L120 92 L180 70 L240 78 L300 54 L360 60 L420 38 L480 44 L540 22 L600 28"
-                  fill="none"
-                  stroke="#4f8cff"
-                  strokeWidth="2"
-                />
-              </svg>
-              <div className="mt-3 grid grid-cols-4 gap-3 text-center">
-                {[
-                  ["Win rate", "57%"],
-                  ["Max DD", "-6.2%"],
-                  ["Trades", "143"],
-                  ["Profit factor", "1.9"],
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <div className="text-sm font-semibold tabular-nums">{value}</div>
-                    <div className="text-[11px] text-muted-foreground">{label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* No fabricated performance shown — the honest positioning is the pitch. */}
+          <div className="mx-auto mt-14 max-w-xl animate-fade-up">
+            <p className="text-sm text-muted-foreground">
+              No cherry-picked numbers here. Run a real backtest on your own strategy and see the
+              actual result — net of commission &amp; slippage, measured against buy &amp; hold.
+            </p>
+            <Link
+              href="/backtests"
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "mt-4 gap-2")}
+            >
+              Run a real backtest <ArrowRight size={16} />
+            </Link>
           </div>
         </div>
       </section>

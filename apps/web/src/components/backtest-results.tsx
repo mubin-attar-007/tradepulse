@@ -10,6 +10,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { HypotheticalBanner } from "@/components/hypothetical-banner";
 import { api, ApiError } from "@/lib/api/client";
 import { onThemeChange, readChartTheme, type ChartTheme } from "@/lib/chart-theme";
 import { formatSigned } from "@/lib/utils";
@@ -25,6 +26,7 @@ type ResultDict = {
   final_equity?: string;
   initial_cash?: string;
   num_trades?: number;
+  total_commission?: string;
   metrics?: Record<string, number>;
   equity_curve?: { ts: string; equity: string }[];
   trades?: Trade[];
@@ -168,6 +170,7 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
   const trades = result.trades ?? [];
   return (
     <div className="space-y-4">
+      <HypotheticalBanner />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {METRICS.filter(([k]) => k in metrics).map(([key, label]) => (
           <div key={key} className="rounded-lg border border-border bg-card p-3">
@@ -177,7 +180,22 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
             </div>
           </div>
         ))}
+        {result.total_commission != null ? (
+          <div className="rounded-lg border border-border bg-card p-3">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Fees paid</div>
+            <div className="mt-1 text-lg font-semibold tabular-nums">
+              $
+              {Number(result.total_commission).toLocaleString(undefined, {
+                maximumFractionDigits: 2,
+              })}
+            </div>
+          </div>
+        ) : null}
       </div>
+      <p className="text-[11px] leading-relaxed text-muted-foreground">
+        Returns are net of modeled costs — commission 2&nbsp;bps/side + slippage 1&nbsp;bps. Sharpe
+        &amp; Sortino are annualized with a risk-free rate of 0.
+      </p>
 
       <div className="space-y-1">
         <div className="text-xs uppercase tracking-wide text-muted-foreground">Equity curve</div>

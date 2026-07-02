@@ -1,28 +1,20 @@
 "use client";
 
 import {
-  Bell,
   Boxes,
-  CandlestickChart,
-  FileText,
-  Filter,
   FlaskConical,
   LayoutDashboard,
   LineChart,
   type LucideIcon,
   PlayCircle,
   Radio,
-  Settings,
-  Sparkles,
-  Star,
-  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
-type Item = { label: string; href?: string; icon: LucideIcon };
+type Item = { label: string; href?: string; icon: LucideIcon; gated?: boolean };
 
 const NAV: { title: string; items: Item[] }[] = [
   {
@@ -30,15 +22,6 @@ const NAV: { title: string; items: Item[] }[] = [
     items: [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { label: "Markets", href: "/markets", icon: LineChart },
-      { label: "Watchlists", icon: Star },
-    ],
-  },
-  {
-    title: "Research",
-    items: [
-      { label: "Charts", icon: CandlestickChart },
-      { label: "Screeners", icon: Filter },
-      { label: "AI Insights", icon: Sparkles },
     ],
   },
   {
@@ -47,16 +30,8 @@ const NAV: { title: string; items: Item[] }[] = [
       { label: "Strategies", href: "/strategies", icon: Boxes },
       { label: "Backtesting", href: "/backtests", icon: FlaskConical },
       { label: "Paper Trading", href: "/paper", icon: PlayCircle },
-      { label: "Live Trading", icon: Radio },
-    ],
-  },
-  {
-    title: "Manage",
-    items: [
-      { label: "Portfolio", icon: Wallet },
-      { label: "Alerts", icon: Bell },
-      { label: "Reports", icon: FileText },
-      { label: "Settings", icon: Settings },
+      // Deliberately gated behind hard risk controls — not an unbuilt "coming soon".
+      { label: "Live Trading", icon: Radio, gated: true },
     ],
   },
 ];
@@ -95,11 +70,14 @@ export function AppNavList({ onNavigate }: { onNavigate?: () => void }) {
               ) : (
                 <span
                   key={item.label}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground/40"
+                  title="Real-money trading is intentionally gated behind hard risk controls."
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground/70"
                 >
                   <Icon size={16} />
                   {item.label}
-                  <span className="ml-auto text-[9px] uppercase tracking-wide">soon</span>
+                  <span className="ml-auto rounded border border-border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Gated
+                  </span>
                 </span>
               );
             })}
