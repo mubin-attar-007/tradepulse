@@ -13,6 +13,7 @@ import {
 } from "lightweight-charts";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { DataBadge } from "@/components/data-badge";
 import { IndicatorPanel } from "@/components/indicator-panel";
 import { SignalCard } from "@/components/signal-card";
 import { api, type Bar, type IndicatorSeries, type StrategySpec } from "@/lib/api/client";
@@ -228,8 +229,9 @@ export function ChartWorkspace({ instrumentId }: { instrumentId: string }) {
     <div className="space-y-4">
       <div className="flex items-baseline justify-between">
         <h1 className="text-2xl font-semibold">{instrument?.symbol ?? "Chart"}</h1>
-        <span className="text-sm text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
           {instrument?.name ? `${instrument.name} · ` : ""}1m{isLoading ? " · loading…" : ""}
+          <DataBadge kind="DELAYED" title="Polled market data — delayed, not a live SIP feed." />
         </span>
       </div>
       <div

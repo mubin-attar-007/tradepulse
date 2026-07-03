@@ -46,6 +46,12 @@ _INDICATOR_OUTPUTS: dict[str, tuple[str, ...]] = {
 }
 
 
+def _ensure_utc(value: datetime) -> datetime:
+    """Naive query datetime -> UTC (S1). A naive value compared against the
+    tz-aware ``ts`` column raises at the driver; assume UTC when omitted."""
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+
+
 @router.get("/instruments", response_model=list[InstrumentOut])
 async def list_instruments(
     session: SessionDep,
@@ -69,8 +75,10 @@ async def get_instrument_bars(
         raise BadRequestError(f"Unsupported timeframe {timeframe!r}.")
     if await service.get_instrument(session, instrument_id) is None:
         raise NotFoundError()
-    end = end or datetime.now(UTC)
-    start = start or (end - timedelta(days=1))
+    end = _ensure_utc(end) if end is not None else datetime.now(UTC)
+    start = _ensure_utc(start) if start is not None else (end - timedelta(days=1))
+    if start >= end:
+        raise BadRequestError("`start` must be before `end`.")
     bars = await repo.get_bars(session, instrument_id, timeframe=timeframe, start=start, end=end)
     return [BarOut.model_validate(bar) for bar in bars]
 
@@ -114,8 +122,10 @@ async def get_instrument_indicators(
 
     if await service.get_instrument(session, instrument_id) is None:
         raise NotFoundError()
-    end = end or datetime.now(UTC)
-    start = start or (end - timedelta(days=90))
+    end = _ensure_utc(end) if end is not None else datetime.now(UTC)
+    start = _ensure_utc(start) if start is not None else (end - timedelta(days=90))
+    if start >= end:
+        raise BadRequestError("`start` must be before `end`.")
     bars = await repo.get_bars(session, instrument_id, timeframe=timeframe, start=start, end=end)
     bars = bars[-_MAX_INDICATOR_BARS:]
     if not bars:

@@ -13,6 +13,9 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from pydantic import ValidationError
+
+from app.core.errors import BadRequestError
 from app.modules.backtesting.engine import _size
 from app.modules.strategies.spec import PositionSizing
 from app.modules.trading.schemas import PositionSizeOut, PositionSizeRequest
@@ -31,11 +34,18 @@ def compute_position_size(req: PositionSizeRequest) -> PositionSizeOut:
     if req.stop is not None and entry > 0 and req.stop < entry:
         stop_pct = float((entry - req.stop) / entry)
 
-    sizing = PositionSizing(
-        method=req.method,
-        value=req.value,
-        atr_ref="calc" if req.method == "atr" else None,
-    )
+    # PositionSizing enforces a method-specific range (percent/risk in (0, 1]) that the
+    # request schema's bare ``gt=0`` does NOT — so an out-of-range value would raise a
+    # raw pydantic ValidationError here (a 500, since it bypasses the request-body
+    # handler). Convert it to an honest 4xx (B2).
+    try:
+        sizing = PositionSizing(
+            method=req.method,
+            value=req.value,
+            atr_ref="calc" if req.method == "atr" else None,
+        )
+    except ValidationError as exc:
+        raise BadRequestError(exc.errors()[0]["msg"]) from exc
     qty = _size(sizing, equity, entry, stop_pct, req.atr)
     if qty < 0:
         qty = _D0

@@ -142,10 +142,11 @@ export function CalculatorView() {
                   label="Risk per trade"
                   suffix="%"
                   min={0}
+                  max={100}
                   step="any"
                   value={riskPct}
                   onChange={(e) => setRiskPct(e.target.value)}
-                  hint="Percent of equity lost if the stop is hit."
+                  hint="Percent of equity lost if the stop is hit (max 100%)."
                 />
               )}
               {method === "percent_equity" && (
@@ -154,10 +155,11 @@ export function CalculatorView() {
                   label="Allocation"
                   suffix="%"
                   min={0}
+                  max={100}
                   step="any"
                   value={allocPct}
                   onChange={(e) => setAllocPct(e.target.value)}
-                  hint="Percent of equity to allocate as notional."
+                  hint="Percent of equity to allocate as notional (max 100%)."
                 />
               )}
               {method === "fixed_units" && (

@@ -85,11 +85,15 @@ class PaperService:
             )
             snapshot = result_to_dict(result, as_of=end)
             paper.snapshot = snapshot
+            paper.last_run_at = end
             # Idempotent snapshot-diff: persist an Alert + email for each NEW fill /
             # RiskEvent (no-op when nothing changed; never double-fires — see alerts.py).
+            # dispatch_snapshot_alerts commits this session's rows BEFORE emailing, so
+            # last_run_at/snapshot above are set first to land in that same durable commit.
             email_to = await self.session.scalar(select(User.email).where(User.id == self.owner_id))
             await dispatch_snapshot_alerts(self.alerts, paper, snapshot, email_to=email_to)
-        paper.last_run_at = end
+        else:
+            paper.last_run_at = end
         await self.session.flush()
         return paper
 

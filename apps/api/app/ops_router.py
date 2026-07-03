@@ -50,8 +50,14 @@ async def tick(key: str = Query(default="")) -> dict[str, Any]:
     async with sessionmaker() as session:
         sessions = await all_running_sessions(session)
         for paper in sessions:
-            await PaperService(session, paper.owner_id).run_session(paper)
-        await session.commit()
+            # Isolate each session (B1): run_session commits its own alert rows before
+            # emailing, so one owner's failure can't roll back or block another's.
+            try:
+                await PaperService(session, paper.owner_id).run_session(paper)
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                logger.exception("run_paper_session_failed", session_id=str(paper.id))
         advanced = len(sessions)
 
     logger.info("tick", published=published, advanced=advanced)

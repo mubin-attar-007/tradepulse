@@ -133,13 +133,22 @@ async def dispatch_snapshot_alerts(
 
     Idempotent: keys off already-persisted dedup_keys and de-dups within the batch,
     so the 30s cron never re-fires. Returns the number of new alerts emitted.
+
+    Durability discipline (B1 — never re-spam): the Alert rows are COMMITTED before
+    any email leaves the process. Email is a real-world side effect that cannot be
+    rolled back, so if we sent first and a later exception rolled back the dedup
+    rows, the next 30s tick would re-email everything. By committing the dedup rows
+    up front, an email failure (or any later crash) leaves the row persisted and the
+    event is never re-sent; the ``(session_id, dedup_key)`` unique constraint remains
+    the hard backstop under a race.
     """
     events = _events_from_snapshot(paper.symbol, snapshot)
     if not events:
         return 0
 
     seen = await repo.existing_dedup_keys(paper.id)
-    new_count = 0
+    # Persist the new Alert rows first, remembering what to email once they're durable.
+    pending: list[tuple[str, dict[str, Any]]] = []
     for ev in events:
         key = ev["dedup_key"]
         if key in seen:
@@ -153,11 +162,19 @@ async def dispatch_snapshot_alerts(
             detail=ev["detail"],
         )
         await repo.add(alert)
-        new_count += 1
-        if email_to:
-            subject, body = _email_body(paper.symbol, ev["kind"], ev["detail"])
+        pending.append((ev["kind"], ev["detail"]))
+
+    if not pending:
+        return 0
+
+    # Commit the dedup rows BEFORE sending any email — the idempotency guard is only
+    # durable once flushed to the DB. Only after this can send_email safely fire.
+    await repo.session.commit()
+
+    if email_to:
+        for kind, detail in pending:
+            subject, body = _email_body(paper.symbol, kind, detail)
             await send_email(email_to, subject, body)
 
-    if new_count:
-        logger.info("paper_alerts_dispatched", session_id=str(paper.id), count=new_count)
-    return new_count
+    logger.info("paper_alerts_dispatched", session_id=str(paper.id), count=len(pending))
+    return len(pending)

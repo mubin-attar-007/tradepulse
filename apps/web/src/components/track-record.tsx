@@ -17,16 +17,17 @@ import { cn } from "@/lib/utils";
  * formatting) so the marketing surface shows numbers the exact way the app does.
  */
 
-// Same subset + labels the backtest results grid shows; num_trades is a summed count.
+// PUBLIC landing surface: annualized metrics (CAGR/Sharpe/Sortino) are deliberately
+// OMITTED. They are computed by annualizing per-run returns over samples that may be
+// only a couple of days long, which yields absurd, misleading figures — and this is a
+// crawlable page. The server also strips them (public_router._public_metrics). We show
+// only honest, per-run, non-annualized aggregates; num_trades is a summed count.
 const METRICS: [string, string][] = [
   ["total_return", "Avg return / run"],
-  ["cagr", "Avg CAGR"],
-  ["sharpe", "Avg Sharpe"],
-  ["sortino", "Avg Sortino"],
   ["max_drawdown", "Avg max DD"],
   ["win_rate", "Avg win rate"],
 ];
-const PCT = new Set(["total_return", "cagr", "max_drawdown", "win_rate"]);
+const PCT = new Set(["total_return", "max_drawdown", "win_rate"]);
 
 function fmtMetric(key: string, value: number): string {
   if (PCT.has(key)) return `${(value * 100).toFixed(2)}%`;
@@ -89,9 +90,10 @@ export async function TrackRecord() {
           {numTrades != null ? (
             <span className="tabular-nums">{Math.round(numTrades).toLocaleString()} </span>
           ) : null}
-          hypothetical trades. Sharpe &amp; Sortino annualized at a 0 risk-free rate. Per-run
-          average, not indicative of future results and not an achievable return. Engine{" "}
-          <span className="tabular-nums">{tr.engine_version}</span>
+          hypothetical trades. These are <strong>per-run figures over a limited sample and are
+          NOT annualized</strong> (annualized metrics like CAGR/Sharpe/Sortino are omitted — they
+          mislead over short windows). Per-run average, not indicative of future results and not an
+          achievable return. Engine <span className="tabular-nums">{tr.engine_version}</span>
           {tr.spec_hash ? (
             <>
               {" · spec "}

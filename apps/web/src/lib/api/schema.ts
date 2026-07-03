@@ -591,6 +591,10 @@ export interface paths {
         /**
          * Get Public Bars
          * @description OHLCV history for the public chart (reuses the shared ``get_bars`` reader).
+         *
+         *     Anonymous surface, so the window is bounded (B3): naive datetimes are read as
+         *     UTC (S1), ``start`` must precede ``end``, the span may not exceed a per-timeframe
+         *     max, and the payload is hard-capped at ``_MAX_PUBLIC_BARS`` rows.
          */
         get: operations["get_public_bars_public_markets__ticker__bars_get"];
         put?: never;

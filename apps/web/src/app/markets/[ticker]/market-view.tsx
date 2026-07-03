@@ -14,17 +14,20 @@ import { cn } from "@/lib/utils";
 
 // Reference-backtest metrics we surface, in display order (keys from
 // backtesting/metrics.compute_metrics). Percent-valued keys are formatted as %.
+//
+// PUBLIC surface: annualized metrics (CAGR/Sharpe/Sortino) are deliberately OMITTED.
+// The reference run may cover only a short sample, over which annualization produces
+// absurd, misleading figures — and these pages are crawlable. The server also strips
+// them from the response (see public_router._public_metrics), so this is belt-and-
+// suspenders. We show only honest, per-run, non-annualized figures.
 const METRICS: [string, string][] = [
-  ["total_return", "Return"],
-  ["cagr", "CAGR"],
-  ["sharpe", "Sharpe"],
-  ["sortino", "Sortino"],
+  ["total_return", "Return / run"],
   ["max_drawdown", "Max DD"],
   ["win_rate", "Win rate"],
   ["profit_factor", "Profit factor"],
   ["num_trades", "Trades"],
 ];
-const PCT = new Set(["total_return", "cagr", "max_drawdown", "win_rate"]);
+const PCT = new Set(["total_return", "max_drawdown", "win_rate"]);
 
 function fmtMetric(key: string, value: number): string {
   if (PCT.has(key)) return `${(value * 100).toFixed(2)}%`;
@@ -179,8 +182,10 @@ export function MarketView({
                   ? ` · ${ref.start.slice(0, 10)} → ${ref.end.slice(0, 10)}`
                   : ""}
                 . Reproducible: spec {ref.spec_hash.slice(0, 12)} on engine {ref.engine_version}.
-                Returns are net of modeled commission &amp; slippage; Sharpe &amp; Sortino are
-                annualized with a risk-free rate of 0.{" "}
+                Returns are net of modeled commission &amp; slippage. These are{" "}
+                <strong>per-run figures over a limited sample and are NOT annualized</strong>{" "}
+                (annualized metrics like CAGR/Sharpe/Sortino are omitted here — they are
+                meaningless over a short window).{" "}
                 <Link
                   href="/methodology"
                   className="underline underline-offset-2 hover:text-foreground"

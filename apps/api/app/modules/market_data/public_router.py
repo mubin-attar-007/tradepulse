@@ -38,6 +38,18 @@ router = APIRouter(prefix="/public/markets", tags=["public-markets"])
 # because it is a universe-wide aggregate, not a per-ticker resource.
 track_record_router = APIRouter(prefix="/public", tags=["public-markets"])
 
+# Annualized metrics are meaningless — and wildly misleading (billion-percent CAGR) —
+# over the tiny bar samples the reference backtest may run on, and these numbers are
+# rendered on crawlable SEO pages. Strip them from every PUBLIC surface (B4/S3); the
+# authed app keeps them (real users see the caveats). We keep only per-run, non-
+# annualized metrics: total_return, max_drawdown, win_rate, num_trades, etc.
+_ANNUALIZED_METRICS = frozenset({"cagr", "sharpe", "sortino"})
+
+
+def _public_metrics(metrics: dict[str, float]) -> dict[str, float]:
+    """Drop annualized metrics that mislead over short/limited samples (B4)."""
+    return {k: v for k, v in metrics.items() if k not in _ANNUALIZED_METRICS}
+
 
 @track_record_router.get("/track-record", response_model=PublicTrackRecordOut)
 async def get_public_track_record(session: SessionDep) -> PublicTrackRecordOut:
@@ -56,14 +68,14 @@ async def get_public_track_record(session: SessionDep) -> PublicTrackRecordOut:
         symbols_covered=tr.symbols_covered,
         symbols_total=tr.symbols_total,
         total_bars=tr.total_bars,
-        metrics=tr.metrics,
+        metrics=_public_metrics(tr.metrics),
         components=[
             PublicTrackRecordComponent(
                 symbol=c.symbol,
                 bars=c.bars,
                 start=c.start,
                 end=c.end,
-                metrics=c.metrics,
+                metrics=_public_metrics(c.metrics),
             )
             for c in tr.components
         ],
@@ -77,6 +89,28 @@ _TIMEFRAMES = {"1m", "5m", "15m", "1h", "4h", "1d"}
 # Bars pulled to compute the on-page indicator series. Enough to warm up a 20-period
 # indicator with room to spare, capped so the public payload stays small.
 _INDICATOR_BARS = 500
+
+# Hard row cap on the public bars payload — mirrors the authed router's
+# _MAX_INDICATOR_BARS so an anonymous caller can't pull an unbounded history (B3).
+_MAX_PUBLIC_BARS = 1500
+
+# Per-timeframe max query span (B3). Attacker-controlled start/end otherwise let a
+# 1m request full-scan a month of raw bars. Each cap is chosen so a legit chart
+# window fits well inside ~_MAX_PUBLIC_BARS bars for that timeframe.
+_MAX_SPAN: dict[str, timedelta] = {
+    "1m": timedelta(days=2),
+    "5m": timedelta(days=7),
+    "15m": timedelta(days=21),
+    "1h": timedelta(days=90),
+    "4h": timedelta(days=365),
+    "1d": timedelta(days=365 * 5),
+}
+
+
+def _ensure_utc(value: datetime) -> datetime:
+    """Naive query datetime -> UTC (S1). A naive value compared against the
+    tz-aware ``ts`` column raises at the driver; assume UTC for public callers."""
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
 
 
 def _normalize_slug(ticker: str) -> str:
@@ -136,7 +170,7 @@ async def get_public_market(ticker: str, session: SessionDep) -> PublicMarketOut
         bars=summary.bars,
         start=summary.start,
         end=summary.end,
-        metrics=summary.metrics,
+        metrics=_public_metrics(summary.metrics),
         note=summary.note,
     )
 
@@ -161,15 +195,30 @@ async def get_public_bars(
     start: datetime | None = Query(default=None),
     end: datetime | None = Query(default=None),
 ) -> list[PublicChartBar]:
-    """OHLCV history for the public chart (reuses the shared ``get_bars`` reader)."""
+    """OHLCV history for the public chart (reuses the shared ``get_bars`` reader).
+
+    Anonymous surface, so the window is bounded (B3): naive datetimes are read as
+    UTC (S1), ``start`` must precede ``end``, the span may not exceed a per-timeframe
+    max, and the payload is hard-capped at ``_MAX_PUBLIC_BARS`` rows."""
     if timeframe not in _TIMEFRAMES:
         raise BadRequestError(f"Unsupported timeframe {timeframe!r}.")
     instrument = await service.resolve_symbol(session, _normalize_slug(ticker))
     if instrument is None:
         raise NotFoundError(f"Unknown ticker {ticker!r}.")
-    end = end or datetime.now(UTC)
-    start = start or (end - timedelta(days=30))
-    bars = await repo.get_bars(session, instrument.id, timeframe=timeframe, start=start, end=end)
+    end = _ensure_utc(end) if end is not None else datetime.now(UTC)
+    # Default window per timeframe keeps a bare request cheap (was a flat 30 days,
+    # which on 1m was a full-month scan).
+    max_span = _MAX_SPAN[timeframe]
+    start = _ensure_utc(start) if start is not None else (end - min(max_span, timedelta(days=30)))
+    if start >= end:
+        raise BadRequestError("`start` must be before `end`.")
+    if end - start > max_span:
+        raise BadRequestError(
+            f"Requested span too large for {timeframe}: max {max_span.days} day(s)."
+        )
+    bars = await repo.get_bars(
+        session, instrument.id, timeframe=timeframe, start=start, end=end, limit=_MAX_PUBLIC_BARS
+    )
     return [
         PublicChartBar(ts=b.ts, open=b.open, high=b.high, low=b.low, close=b.close, volume=b.volume)
         for b in bars

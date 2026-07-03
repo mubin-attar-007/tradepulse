@@ -91,10 +91,16 @@ def compute_indicators(df: pd.DataFrame, indicators: Sequence[IndicatorSpec]) ->
             out[f"indicator:{ind.id}:upper"] = (mid + std * dev).to_numpy()
             out[f"indicator:{ind.id}:lower"] = (mid - std * dev).to_numpy()
         elif ind.type == "MACD":
-            fast = close.ewm(span=int(p["fast"]), adjust=False).mean()
-            slow = close.ewm(span=int(p["slow"]), adjust=False).mean()
+            fast_p, slow_p, signal_p = int(p["fast"]), int(p["slow"]), int(p["signal"])
+            # min_periods so MACD shows honest null warm-up gaps like SMA/RSI/BBANDS
+            # (N3) instead of emitting finite values from bar 0. The MACD line warms up
+            # over the slow EMA; the signal EMA then warms up over the (already-gapped)
+            # MACD line — its own min_periods counts only non-NaN MACD inputs, so pass
+            # signal_p here (NOT slow+signal) to avoid double-counting the slow warm-up.
+            fast = close.ewm(span=fast_p, adjust=False, min_periods=fast_p).mean()
+            slow = close.ewm(span=slow_p, adjust=False, min_periods=slow_p).mean()
             macd = fast - slow
-            signal = macd.ewm(span=int(p["signal"]), adjust=False).mean()
+            signal = macd.ewm(span=signal_p, adjust=False, min_periods=signal_p).mean()
             out[f"indicator:{ind.id}:macd"] = macd.to_numpy()
             out[f"indicator:{ind.id}:signal"] = signal.to_numpy()
             out[f"indicator:{ind.id}:hist"] = (macd - signal).to_numpy()

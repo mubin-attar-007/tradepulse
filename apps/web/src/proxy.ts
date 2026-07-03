@@ -7,14 +7,14 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 
-// Reachable without a session. `/markets` covers the public per-ticker SEO pages
-// (`/markets/[ticker]`) — crawlable server-rendered pages that must not be
-// auth-redirected.
+// Reachable without a session. NOTE: bare `/markets` is intentionally NOT here — it
+// resolves to the AUTHED (app) markets shell and must stay gated (B5). Only the public
+// per-ticker subtree `/markets/[ticker]` is crawlable, handled by the startsWith check
+// in `proxy()` below.
 const PUBLIC_PATHS = [
   "/",
   "/login",
   "/methodology",
-  "/markets",
   "/forgot-password",
   "/reset-password",
 ];
@@ -30,7 +30,11 @@ function isSafeNext(next: string | null): next is string {
 
 export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
-  const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  // The public per-ticker pages live under `/markets/<ticker>`. Bare `/markets` is
+  // the authed app shell, so match ONLY the subtree — never the exact path (B5).
+  const isPublicMarket = pathname.startsWith("/markets/");
+  const isPublic =
+    isPublicMarket || PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   const bounceWhenAuthed = AUTHED_REDIRECT_PATHS.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );

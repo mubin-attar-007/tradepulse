@@ -3786,7 +3786,7 @@
     },
     "/public/markets/{ticker}/bars": {
       "get": {
-        "description": "OHLCV history for the public chart (reuses the shared ``get_bars`` reader).",
+        "description": "OHLCV history for the public chart (reuses the shared ``get_bars`` reader).\n\nAnonymous surface, so the window is bounded (B3): naive datetimes are read as\nUTC (S1), ``start`` must precede ``end``, the span may not exceed a per-timeframe\nmax, and the payload is hard-capped at ``_MAX_PUBLIC_BARS`` rows.",
         "operationId": "get_public_bars_public_markets__ticker__bars_get",
         "parameters": [
           {

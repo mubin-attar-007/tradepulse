@@ -134,9 +134,14 @@ async def get_bars(
     timeframe: str,
     start: datetime,
     end: datetime,
+    limit: int | None = None,
 ) -> list[BarPoint]:
     """History for charts. ``1m`` reads raw; higher timeframes aggregate on the
-    fly with portable ``date_bin`` SQL (no duplicated storage)."""
+    fly with portable ``date_bin`` SQL (no duplicated storage).
+
+    ``limit`` caps the number of rows returned to the MOST RECENT ``limit`` bars in
+    the window (order DESC + LIMIT at the DB, then re-sorted oldest-first) so a wide
+    window can't trigger an unbounded scan/payload. Results stay oldest-first."""
     if timeframe == "1m":
         stmt = (
             select(OHLCV)
@@ -146,10 +151,13 @@ async def get_bars(
                 OHLCV.ts >= start,
                 OHLCV.ts < end,
             )
-            .order_by(OHLCV.ts)
+            .order_by(OHLCV.ts if limit is None else OHLCV.ts.desc())
         )
+        if limit is not None:
+            stmt = stmt.limit(limit)
         result = await session.execute(stmt)
-        return [BarPoint(r.ts, r.open, r.high, r.low, r.close, r.volume) for r in result.scalars()]
+        rows = [BarPoint(r.ts, r.open, r.high, r.low, r.close, r.volume) for r in result.scalars()]
+        return rows if limit is None else rows[::-1]
 
     interval = _TIMEFRAME_INTERVALS.get(timeframe)
     if interval is None:
@@ -161,6 +169,10 @@ async def get_bars(
     # first-open / last-close — so it runs identically on plain Postgres and on
     # TimescaleDB (no time_bucket/first/last dependency). The UTC origin keeps
     # hourly/daily buckets aligned regardless of the DB session timezone.
+    # When limited, take the most-recent buckets (ORDER BY bucket DESC LIMIT) and
+    # re-sort oldest-first in Python to keep the ascending contract.
+    order = "ASC" if limit is None else "DESC"
+    limit_clause = "" if limit is None else "LIMIT :limit"
     query = text(
         f"""
         SELECT date_bin(INTERVAL '{interval}', ts, TIMESTAMPTZ '1970-01-01 00:00:00+00') AS bucket,
@@ -172,13 +184,18 @@ async def get_bars(
         FROM ohlcv
         WHERE instrument_id = :iid AND is_final AND ts >= :start AND ts < :end
         GROUP BY bucket
-        ORDER BY bucket
+        ORDER BY bucket {order}
+        {limit_clause}
         """
     )
-    result = await session.execute(query, {"iid": instrument_id, "start": start, "end": end})
-    return [
+    params: dict[str, object] = {"iid": instrument_id, "start": start, "end": end}
+    if limit is not None:
+        params["limit"] = limit
+    result = await session.execute(query, params)
+    rows = [
         BarPoint(row.bucket, row.open, row.high, row.low, row.close, row.volume) for row in result
     ]
+    return rows if limit is None else rows[::-1]
 
 
 async def resolve_symbol(session: AsyncSession, symbol: str) -> Instrument | None:
