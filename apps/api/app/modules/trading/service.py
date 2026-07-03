@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError, NotFoundError
 from app.core.logging import get_logger
+from app.modules.auth.models import User
 from app.modules.backtesting import engine
 from app.modules.backtesting.snapshot import result_to_dict
 from app.modules.backtesting.types import ExecutionConfig
@@ -20,8 +21,9 @@ from app.modules.market_data import repository as md_repo
 from app.modules.market_data.models import Instrument
 from app.modules.strategies.repository import StrategyRepository, StrategyVersionRepository
 from app.modules.strategies.spec import StrategySpec
+from app.modules.trading.alerts import dispatch_snapshot_alerts
 from app.modules.trading.models import PaperSession
-from app.modules.trading.repository import PaperSessionRepository
+from app.modules.trading.repository import AlertRepository, PaperSessionRepository
 
 logger = get_logger("paper")
 DEFAULT_CASH = Decimal("100000")
@@ -32,6 +34,7 @@ class PaperService:
         self.session = session
         self.owner_id = owner_id
         self.sessions = PaperSessionRepository(session, owner_id)
+        self.alerts = AlertRepository(session, owner_id)
 
     async def deploy(self, strategy_id: uuid.UUID) -> PaperSession:
         strategy = await StrategyRepository(self.session, self.owner_id).get(strategy_id)
@@ -80,7 +83,12 @@ class PaperService:
                 ExecutionConfig(initial_cash=Decimal(paper.initial_cash)),
                 close_at_end=False,
             )
-            paper.snapshot = result_to_dict(result, as_of=end)
+            snapshot = result_to_dict(result, as_of=end)
+            paper.snapshot = snapshot
+            # Idempotent snapshot-diff: persist an Alert + email for each NEW fill /
+            # RiskEvent (no-op when nothing changed; never double-fires — see alerts.py).
+            email_to = await self.session.scalar(select(User.email).where(User.id == self.owner_id))
+            await dispatch_snapshot_alerts(self.alerts, paper, snapshot, email_to=email_to)
         paper.last_run_at = end
         await self.session.flush()
         return paper

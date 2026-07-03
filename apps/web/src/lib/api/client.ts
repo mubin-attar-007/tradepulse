@@ -16,6 +16,9 @@ export type BacktestSummary = components["schemas"]["BacktestSummaryOut"];
 export type Backtest = components["schemas"]["BacktestOut"];
 export type IndicatorSeries = components["schemas"]["IndicatorSeriesOut"];
 export type Signal = components["schemas"]["SignalOut"];
+export type Alert = components["schemas"]["AlertOut"];
+export type PositionSizeRequest = components["schemas"]["PositionSizeRequest"];
+export type PositionSizeResult = components["schemas"]["PositionSizeOut"];
 /** The canonical StrategySpec DSL (built client-side, sent as a JSON query param). */
 export type StrategySpec = components["schemas"]["StrategySpec-Input"];
 export type IndicatorSpec = components["schemas"]["IndicatorSpec"];
@@ -174,6 +177,21 @@ export const api = {
     apiFetch<{ ticket: string; expires_in: number }>("/market/ws-ticket", { method: "POST" }),
 
   paperSessions: () => apiFetch<PaperSession[]>("/paper/sessions"),
+
+  /**
+   * Position-sizing GUIDANCE from the engine's own `_size()` math (invariant #4).
+   * Money comes back as Decimal strings computed server-side (invariant #2) — the
+   * client never does money math. The result is NOT an executable order (live
+   * trading is gated; POST /live/orders → 403).
+   */
+  positionSize: (req: PositionSizeRequest) =>
+    apiFetch<PositionSizeResult>("/calc/position-size", {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
+
+  /** The signed-in user's recent paper-trading alert feed (newest first). */
+  alerts: () => apiFetch<Alert[]>("/alerts"),
 
   strategies: () => apiFetch<Strategy[]>("/strategies"),
   createStrategy: (spec: unknown) =>

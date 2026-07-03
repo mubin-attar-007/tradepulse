@@ -36,6 +36,7 @@ from app.modules.market_data.realtime import close_hub
 from app.modules.market_data.router import router as market_router
 from app.modules.strategies.router import router as strategies_router
 from app.modules.trading.live_router import router as live_router
+from app.modules.trading.router import alerts_router, calc_router
 from app.modules.trading.router import router as trading_router
 from app.ops_router import router as ops_router
 
@@ -118,6 +119,8 @@ def create_app() -> FastAPI:
     app.include_router(backtests_router)
     app.include_router(ai_router)
     app.include_router(trading_router)
+    app.include_router(calc_router)
+    app.include_router(alerts_router)
     app.include_router(live_router)
     app.include_router(ops_router)
     return app

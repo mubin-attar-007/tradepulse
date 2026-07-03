@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  Bell,
   Boxes,
+  Calculator,
   FlaskConical,
   LayoutDashboard,
   LineChart,
@@ -30,6 +32,8 @@ const NAV: { title: string; items: Item[] }[] = [
       { label: "Strategies", href: "/strategies", icon: Boxes },
       { label: "Backtesting", href: "/backtests", icon: FlaskConical },
       { label: "Paper Trading", href: "/paper", icon: PlayCircle },
+      { label: "Calculator", href: "/calculator", icon: Calculator },
+      { label: "Alerts", href: "/alerts", icon: Bell },
       // Deliberately gated behind hard risk controls — not an unbuilt "coming soon".
       { label: "Live Trading", icon: Radio, gated: true },
     ],

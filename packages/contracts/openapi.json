@@ -1,6 +1,49 @@
 {
   "components": {
     "schemas": {
+      "AlertOut": {
+        "description": "One fired paper-trading alert (entry/exit fill or risk event).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "title": "Detail",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "session_id",
+          "kind",
+          "symbol",
+          "detail",
+          "created_at"
+        ],
+        "title": "AlertOut",
+        "type": "object"
+      },
       "BacktestOut": {
         "properties": {
           "created_at": {
@@ -1149,6 +1192,118 @@
           "email"
         ],
         "title": "PasswordResetRequest",
+        "type": "object"
+      },
+      "PositionSizeOut": {
+        "description": "Sizing GUIDANCE \u2014 never an executable order (live trading stays gated).\nAll figures are Decimal strings computed server-side from the engine's math.",
+        "properties": {
+          "notional": {
+            "title": "Notional",
+            "type": "string"
+          },
+          "pct_of_equity": {
+            "title": "Pct Of Equity",
+            "type": "string"
+          },
+          "qty": {
+            "title": "Qty",
+            "type": "string"
+          },
+          "risk_amount": {
+            "title": "Risk Amount",
+            "type": "string"
+          }
+        },
+        "required": [
+          "qty",
+          "notional",
+          "risk_amount",
+          "pct_of_equity"
+        ],
+        "title": "PositionSizeOut",
+        "type": "object"
+      },
+      "PositionSizeRequest": {
+        "additionalProperties": false,
+        "description": "Inputs for a position-sizing computation. All money/price inputs are decimals\nsent as JSON numbers; the server returns Decimal STRINGS (invariant #2) so the\nclient never does money math.\n\n``stop`` is the protective-stop PRICE (used to derive risk-per-share for the\n``risk_per_trade`` method); ``atr`` is the absolute ATR value for ``atr`` sizing.",
+        "properties": {
+          "atr": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atr"
+          },
+          "entry": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Entry"
+          },
+          "equity": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Equity"
+          },
+          "method": {
+            "enum": [
+              "fixed_units",
+              "percent_equity",
+              "risk_per_trade",
+              "atr"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "stop": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop"
+          },
+          "value": {
+            "exclusiveMinimum": 0.0,
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "method",
+          "value",
+          "equity",
+          "entry"
+        ],
+        "title": "PositionSizeRequest",
         "type": "object"
       },
       "PositionSizing": {
@@ -2317,6 +2472,32 @@
         ]
       }
     },
+    "/alerts": {
+      "get": {
+        "description": "The signed-in user's recent paper-trading alert feed (newest first).",
+        "operationId": "list_alerts_alerts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AlertOut"
+                  },
+                  "title": "Response List Alerts Alerts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Alerts",
+        "tags": [
+          "alerts"
+        ]
+      }
+    },
     "/auth/change-password": {
       "post": {
         "operationId": "change_password_auth_change_password_post",
@@ -2819,6 +3000,48 @@
         "summary": "Add Connection",
         "tags": [
           "live-trading"
+        ]
+      }
+    },
+    "/calc/position-size": {
+      "post": {
+        "description": "Position-sizing GUIDANCE from the engine's own ``_size()`` math. This is\nNOT an executable order \u2014 live trading is gated (POST /live/orders \u2192 403).",
+        "operationId": "position_size_calc_position_size_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PositionSizeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionSizeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Position Size",
+        "tags": [
+          "calc"
         ]
       }
     },

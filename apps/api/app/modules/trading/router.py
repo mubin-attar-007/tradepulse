@@ -11,9 +11,13 @@ from app.core.deps import SessionDep
 from app.core.errors import NotFoundError
 from app.modules.auth.deps import CurrentUser
 from app.modules.trading import schemas
+from app.modules.trading.calc import compute_position_size
+from app.modules.trading.repository import AlertRepository
 from app.modules.trading.service import PaperService
 
 router = APIRouter(prefix="/paper", tags=["paper-trading"])
+calc_router = APIRouter(prefix="/calc", tags=["calc"])
+alerts_router = APIRouter(prefix="/alerts", tags=["alerts"])
 
 
 @router.post("/deploy", status_code=201, response_model=schemas.PaperSessionOut)
@@ -60,3 +64,19 @@ async def stop(
 ) -> schemas.PaperSessionOut:
     paper = await PaperService(session, user.id).stop(session_id)
     return schemas.PaperSessionOut.model_validate(paper)
+
+
+@calc_router.post("/position-size", response_model=schemas.PositionSizeOut)
+async def position_size(
+    payload: schemas.PositionSizeRequest, user: CurrentUser
+) -> schemas.PositionSizeOut:
+    """Position-sizing GUIDANCE from the engine's own ``_size()`` math. This is
+    NOT an executable order — live trading is gated (POST /live/orders → 403)."""
+    return compute_position_size(payload)
+
+
+@alerts_router.get("", response_model=list[schemas.AlertOut])
+async def list_alerts(session: SessionDep, user: CurrentUser) -> list[schemas.AlertOut]:
+    """The signed-in user's recent paper-trading alert feed (newest first)."""
+    rows = await AlertRepository(session, user.id).list_for_owner()
+    return [schemas.AlertOut.model_validate(row) for row in rows]

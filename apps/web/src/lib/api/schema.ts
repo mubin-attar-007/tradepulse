@@ -38,6 +38,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Alerts
+         * @description The signed-in user's recent paper-trading alert feed (newest first).
+         */
+        get: operations["list_alerts_alerts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/change-password": {
         parameters: {
             query?: never;
@@ -241,6 +261,27 @@ export interface paths {
         put?: never;
         /** Add Connection */
         post: operations["add_connection_brokers_connections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/calc/position-size": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Position Size
+         * @description Position-sizing GUIDANCE from the engine's own ``_size()`` math. This is
+         *     NOT an executable order — live trading is gated (POST /live/orders → 403).
+         */
+        post: operations["position_size_calc_position_size_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -675,6 +716,35 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AlertOut
+         * @description One fired paper-trading alert (entry/exit fill or risk event).
+         */
+        AlertOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Detail */
+            detail: {
+                [key: string]: unknown;
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Session Id
+             * Format: uuid
+             */
+            session_id: string;
+            /** Symbol */
+            symbol: string;
+        };
         /** BacktestOut */
         BacktestOut: {
             /**
@@ -1113,6 +1183,47 @@ export interface components {
              * Format: email
              */
             email: string;
+        };
+        /**
+         * PositionSizeOut
+         * @description Sizing GUIDANCE — never an executable order (live trading stays gated).
+         *     All figures are Decimal strings computed server-side from the engine's math.
+         */
+        PositionSizeOut: {
+            /** Notional */
+            notional: string;
+            /** Pct Of Equity */
+            pct_of_equity: string;
+            /** Qty */
+            qty: string;
+            /** Risk Amount */
+            risk_amount: string;
+        };
+        /**
+         * PositionSizeRequest
+         * @description Inputs for a position-sizing computation. All money/price inputs are decimals
+         *     sent as JSON numbers; the server returns Decimal STRINGS (invariant #2) so the
+         *     client never does money math.
+         *
+         *     ``stop`` is the protective-stop PRICE (used to derive risk-per-share for the
+         *     ``risk_per_trade`` method); ``atr`` is the absolute ATR value for ``atr`` sizing.
+         */
+        PositionSizeRequest: {
+            /** Atr */
+            atr?: number | null;
+            /** Entry */
+            entry: number | string;
+            /** Equity */
+            equity: number | string;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "fixed_units" | "percent_equity" | "risk_per_trade" | "atr";
+            /** Stop */
+            stop?: number | string | null;
+            /** Value */
+            value: number;
         };
         /** PositionSizing */
         PositionSizing: {
@@ -1611,6 +1722,26 @@ export interface operations {
             };
         };
     };
+    list_alerts_alerts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertOut"][];
+                };
+            };
+        };
+    };
     change_password_auth_change_password_post: {
         parameters: {
             query?: never;
@@ -2005,6 +2136,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BrokerConnectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    position_size_calc_position_size_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PositionSizeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PositionSizeOut"];
                 };
             };
             /** @description Validation Error */
