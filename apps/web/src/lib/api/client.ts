@@ -15,6 +15,13 @@ export type StrategyDetail = components["schemas"]["StrategyDetailOut"];
 export type BacktestSummary = components["schemas"]["BacktestSummaryOut"];
 export type Backtest = components["schemas"]["BacktestOut"];
 
+// Public (unauthenticated) per-ticker SEO surface.
+export type PublicInstrumentSummary = components["schemas"]["PublicInstrumentSummary"];
+export type PublicMarket = components["schemas"]["PublicMarketOut"];
+export type PublicChartBar = components["schemas"]["PublicChartBar"];
+export type PublicIndicatorSeries = components["schemas"]["PublicIndicatorSeries"];
+export type PublicReferenceSummary = components["schemas"]["PublicReferenceSummary"];
+
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 const UNSAFE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -32,6 +39,24 @@ function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : null;
+}
+
+/**
+ * Base for the PUBLIC, unauthenticated endpoints (`/public/markets…`).
+ *
+ * These are called from server components (the SEO pages) as well as, potentially,
+ * the browser. In the browser we go through the same-origin `/api` rewrite. On the
+ * server there is no origin to resolve a relative `/api/*` against, so we hit the
+ * backend directly at `API_PROXY_TARGET` (the same target next.config uses for the
+ * `/api/*` rewrite) — the backend serves the public router at `/public/markets`
+ * with no `/api` prefix.
+ */
+function publicBase(): string {
+  if (typeof window === "undefined") {
+    const target = process.env.API_PROXY_TARGET ?? "http://localhost:8080";
+    return target.replace(/\/$/, "");
+  }
+  return BASE;
 }
 
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -55,6 +80,23 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ApiError(res.status, detail);
   }
   if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+/** Fetch a PUBLIC endpoint, origin-resolved for server vs. browser (see `publicBase`). */
+async function publicFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers);
+  headers.set("Accept", "application/json");
+  const res = await fetch(`${publicBase()}${path}`, { ...init, headers });
+  if (!res.ok) {
+    let detail = res.statusText;
+    try {
+      detail = ((await res.json()) as { detail?: string }).detail ?? detail;
+    } catch {
+      /* non-JSON error body */
+    }
+    throw new ApiError(res.status, detail);
+  }
   return (await res.json()) as T;
 }
 
@@ -131,6 +173,20 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ context }),
     }),
+
+  // --- Public (unauthenticated) per-ticker SEO surface ---
+  /** Catalog of tickers available on the public pages (used by the sitemap). */
+  publicMarkets: (init?: RequestInit) =>
+    publicFetch<PublicInstrumentSummary[]>("/public/markets", init),
+  /** Full per-ticker bundle: meta + delayed price + real indicators + reference backtest. */
+  publicMarket: (ticker: string, init?: RequestInit) =>
+    publicFetch<PublicMarket>(`/public/markets/${encodeURIComponent(ticker)}`, init),
+  /** OHLCV history for the public chart. */
+  publicBars: (ticker: string, timeframe: string, init?: RequestInit) =>
+    publicFetch<PublicChartBar[]>(
+      `/public/markets/${encodeURIComponent(ticker)}/bars?timeframe=${encodeURIComponent(timeframe)}`,
+      init,
+    ),
 };
 
 

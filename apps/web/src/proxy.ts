@@ -7,8 +7,17 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 
-// Reachable without a session.
-const PUBLIC_PATHS = ["/", "/login", "/methodology", "/forgot-password", "/reset-password"];
+// Reachable without a session. `/markets` covers the public per-ticker SEO pages
+// (`/markets/[ticker]`) — crawlable server-rendered pages that must not be
+// auth-redirected.
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/methodology",
+  "/markets",
+  "/forgot-password",
+  "/reset-password",
+];
 // The subset that logged-in users should be bounced away from (login / marketing entry) into the
 // app. Open docs like /methodology stay viewable whether or not you're signed in.
 const AUTHED_REDIRECT_PATHS = ["/", "/login"];

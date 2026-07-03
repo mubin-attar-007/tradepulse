@@ -1,12 +1,30 @@
 import type { MetadataRoute } from "next";
 
+import { api } from "@/lib/api/client";
 import { SITE_URL } from "@/lib/brand";
+import { symbolToSlug } from "@/lib/markets/slug";
 
-// Only publicly reachable, indexable surfaces — the marketing landing, the
-// methodology docs, and the sign-in entry. Authenticated app routes are gated
-// and intentionally omitted.
-export default function sitemap(): MetadataRoute.Sitemap {
+// Publicly reachable, indexable surfaces: the marketing landing, the methodology
+// docs, the sign-in entry, and one entry per public per-ticker page. The ticker
+// list is fetched from the public API — if the backend is unreachable at build
+// time we degrade to the static surfaces rather than fail the build.
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();
+
+  let tickerEntries: MetadataRoute.Sitemap = [];
+  try {
+    const instruments = await api.publicMarkets({ cache: "no-store" });
+    tickerEntries = instruments.map((i) => ({
+      url: `${SITE_URL}/markets/${symbolToSlug(i.ticker)}`,
+      lastModified,
+      changeFrequency: "daily",
+      priority: 0.7,
+    }));
+  } catch {
+    // Backend unavailable (e.g. `next build` with no API running) — ship the
+    // static surfaces only.
+  }
+
   return [
     {
       url: SITE_URL,
@@ -26,5 +44,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.5,
     },
+    ...tickerEntries,
   ];
 }

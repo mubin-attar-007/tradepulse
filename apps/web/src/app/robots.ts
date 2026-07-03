@@ -9,7 +9,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", "/dashboard", "/account", "/backtests", "/chart", "/markets", "/paper", "/strategies"],
+      // /markets is intentionally allowed — the public per-ticker SEO pages live there.
+      disallow: ["/api/", "/dashboard", "/account", "/backtests", "/chart", "/paper", "/strategies"],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
     host: SITE_URL,
