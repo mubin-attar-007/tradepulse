@@ -512,6 +512,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/track-record": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Public Track Record
+         * @description Curated, caveated aggregate of the reference backtest across the universe.
+         *
+         *     HYPOTHETICAL: the frontend must render this under the HypotheticalBanner. Every
+         *     number is real ``compute_metrics()`` output; the aggregate is an equal-weight,
+         *     per-run average across covered symbols (never compounded, never a real return).
+         */
+        get: operations["get_public_track_record_public_track_record_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ready": {
         parameters: {
             query?: never;
@@ -1141,6 +1165,68 @@ export interface components {
             strategy: string;
             /** Timeframe */
             timeframe: string;
+        };
+        /**
+         * PublicTrackRecordComponent
+         * @description One symbol's reference run inside the aggregate track record.
+         *
+         *     HYPOTHETICAL / backtested — render under the HypotheticalBanner with the rest.
+         */
+        PublicTrackRecordComponent: {
+            /** Bars */
+            bars: number;
+            /** End */
+            end: string | null;
+            /** Metrics */
+            metrics: {
+                [key: string]: number;
+            };
+            /** Start */
+            start: string | null;
+            /** Symbol */
+            symbol: string;
+        };
+        /**
+         * PublicTrackRecordOut
+         * @description The curated, caveated landing-page track record.
+         *
+         *     An equal-weight, per-run AVERAGE of the reference SMA-crossover backtest across the
+         *     covered universe — NOT a portfolio, NOT compounded, NOT a real/achievable return.
+         *     HYPOTHETICAL: always render under the HypotheticalBanner. ``provenance`` fields
+         *     (``engine_version``, ``commission_bps``, ``slippage_bps``, ``data_note``) make the
+         *     number reproducible.
+         */
+        PublicTrackRecordOut: {
+            /** Available */
+            available: boolean;
+            /** Commission Bps */
+            commission_bps: number;
+            /** Components */
+            components: components["schemas"]["PublicTrackRecordComponent"][];
+            /** Data Note */
+            data_note: string;
+            /** Engine Version */
+            engine_version: string;
+            /** Metrics */
+            metrics: {
+                [key: string]: number;
+            };
+            /** Note */
+            note: string;
+            /** Slippage Bps */
+            slippage_bps: number;
+            /** Spec Hash */
+            spec_hash: string;
+            /** Strategy */
+            strategy: string;
+            /** Symbols Covered */
+            symbols_covered: number;
+            /** Symbols Total */
+            symbols_total: number;
+            /** Timeframe */
+            timeframe: string;
+            /** Total Bars */
+            total_bars: number;
         };
         /** QuoteOut */
         QuoteOut: {
@@ -2248,6 +2334,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_public_track_record_public_track_record_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicTrackRecordOut"];
                 };
             };
         };

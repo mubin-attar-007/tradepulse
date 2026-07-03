@@ -59,6 +59,7 @@ const REAL: Section[] = [
       "Drawdown is always shown next to returns — an equity curve on its own hides risk.",
       "Sharpe and Sortino are annualized with a risk-free rate of 0. That is stated wherever they appear so the numbers are auditable.",
       "Every trade is exportable to CSV. Backtest numbers carry a persistent 'hypothetical performance' notice.",
+      "The one performance figure on our marketing pages — a single un-optimized reference SMA-crossover strategy — is produced by this exact engine over delayed historical bars, shown per run (never compounded), net of costs, and under the same hypothetical notice. It is an illustration of the method, not a claimed return.",
     ],
   },
   {
@@ -93,7 +94,7 @@ const NOT_CLAIMED: string[] = [
   "Survivorship-bias-free or point-in-time fundamentals.",
   "An automatic in-sample / out-of-sample (train/test) split on backtests.",
   "Deflated-Sharpe or multiple-testing correction for strategy search.",
-  "A buy-and-hold benchmark overlay (the price series isn't yet exposed to the client) — on the roadmap.",
+  "A buy-and-hold benchmark overlay on the reference/track-record numbers — the delayed price series is exposed on the public ticker pages, but the side-by-side benchmark comparison is still on the roadmap.",
 ];
 
 export default function MethodologyPage() {

@@ -21,6 +21,8 @@ export type PublicMarket = components["schemas"]["PublicMarketOut"];
 export type PublicChartBar = components["schemas"]["PublicChartBar"];
 export type PublicIndicatorSeries = components["schemas"]["PublicIndicatorSeries"];
 export type PublicReferenceSummary = components["schemas"]["PublicReferenceSummary"];
+export type PublicTrackRecord = components["schemas"]["PublicTrackRecordOut"];
+export type PublicTrackRecordComponent = components["schemas"]["PublicTrackRecordComponent"];
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 const UNSAFE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -187,6 +189,9 @@ export const api = {
       `/public/markets/${encodeURIComponent(ticker)}/bars?timeframe=${encodeURIComponent(timeframe)}`,
       init,
     ),
+  /** Curated, caveated aggregate reference backtest across the universe (landing page). */
+  publicTrackRecord: (init?: RequestInit) =>
+    publicFetch<PublicTrackRecord>("/public/track-record", init),
 };
 
 

@@ -31,6 +31,7 @@ from app.modules.ai.router import router as ai_router
 from app.modules.auth.router import router as auth_router
 from app.modules.backtesting.router import router as backtests_router
 from app.modules.market_data.public_router import router as public_market_router
+from app.modules.market_data.public_router import track_record_router as public_track_record_router
 from app.modules.market_data.realtime import close_hub
 from app.modules.market_data.router import router as market_router
 from app.modules.strategies.router import router as strategies_router
@@ -112,6 +113,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(market_router)
     app.include_router(public_market_router)
+    app.include_router(public_track_record_router)
     app.include_router(strategies_router)
     app.include_router(backtests_router)
     app.include_router(ai_router)

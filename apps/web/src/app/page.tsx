@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { TrackRecord } from "@/components/track-record";
 import { buttonVariants } from "@/components/ui/button";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { cn } from "@/lib/utils";
@@ -116,11 +117,14 @@ export default function LandingPage() {
             Not investment advice · For research &amp; education
           </p>
 
-          {/* No fabricated performance shown — the honest positioning is the pitch. */}
+          {/* The honest positioning is the pitch: no cherry-picked numbers. The only
+              performance figure on this page is the real, caveated reference backtest
+              rendered by <TrackRecord/> below — never a fabricated marketing stat. */}
           <div className="mx-auto mt-14 max-w-xl animate-fade-up">
             <p className="text-sm text-muted-foreground">
-              No cherry-picked numbers here. Run a real backtest on your own strategy and see the
-              actual result — net of commission &amp; slippage, measured against buy &amp; hold.
+              No cherry-picked numbers here. The one performance figure below is our own reference
+              strategy run in the open — net of costs, per run. Then run a real backtest on your
+              own strategy and see the actual result.
             </p>
             <Link
               href="/backtests"
@@ -131,6 +135,10 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Real, caveated track record — the reference backtest under a HypotheticalBanner.
+          Renders nothing if the backend is unreachable or lacks enough history. */}
+      <TrackRecord />
 
       {/* Features */}
       <section className="mx-auto max-w-6xl px-6 py-20">

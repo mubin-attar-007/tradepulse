@@ -28,9 +28,50 @@ from app.modules.market_data.schemas import (
     PublicMarketOut,
     PublicPricePoint,
     PublicReferenceSummary,
+    PublicTrackRecordComponent,
+    PublicTrackRecordOut,
 )
 
 router = APIRouter(prefix="/public/markets", tags=["public-markets"])
+
+# The track record lives at its own top-level public path (not under /markets/{ticker})
+# because it is a universe-wide aggregate, not a per-ticker resource.
+track_record_router = APIRouter(prefix="/public", tags=["public-markets"])
+
+
+@track_record_router.get("/track-record", response_model=PublicTrackRecordOut)
+async def get_public_track_record(session: SessionDep) -> PublicTrackRecordOut:
+    """Curated, caveated aggregate of the reference backtest across the universe.
+
+    HYPOTHETICAL: the frontend must render this under the HypotheticalBanner. Every
+    number is real ``compute_metrics()`` output; the aggregate is an equal-weight,
+    per-run average across covered symbols (never compounded, never a real return)."""
+    tr = await reference_backtest.get_track_record(session)
+    return PublicTrackRecordOut(
+        available=tr.available,
+        strategy=tr.strategy,
+        timeframe=tr.timeframe,
+        spec_hash=tr.spec_hash,
+        engine_version=tr.engine_version,
+        symbols_covered=tr.symbols_covered,
+        symbols_total=tr.symbols_total,
+        total_bars=tr.total_bars,
+        metrics=tr.metrics,
+        components=[
+            PublicTrackRecordComponent(
+                symbol=c.symbol,
+                bars=c.bars,
+                start=c.start,
+                end=c.end,
+                metrics=c.metrics,
+            )
+            for c in tr.components
+        ],
+        commission_bps=tr.commission_bps,
+        slippage_bps=tr.slippage_bps,
+        note=tr.note,
+        data_note=tr.data_note,
+    )
 
 _TIMEFRAMES = {"1m", "5m", "15m", "1h", "4h", "1d"}
 # Bars pulled to compute the on-page indicator series. Enough to warm up a 20-period

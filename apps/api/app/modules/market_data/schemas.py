@@ -113,3 +113,40 @@ class PublicMarketOut(BaseModel):
     latest: PublicPricePoint | None
     indicators: list[PublicIndicatorSeries]
     reference_backtest: PublicReferenceSummary
+
+
+class PublicTrackRecordComponent(BaseModel):
+    """One symbol's reference run inside the aggregate track record.
+
+    HYPOTHETICAL / backtested — render under the HypotheticalBanner with the rest."""
+
+    symbol: str
+    bars: int
+    start: datetime | None
+    end: datetime | None
+    metrics: dict[str, float]
+
+
+class PublicTrackRecordOut(BaseModel):
+    """The curated, caveated landing-page track record.
+
+    An equal-weight, per-run AVERAGE of the reference SMA-crossover backtest across the
+    covered universe — NOT a portfolio, NOT compounded, NOT a real/achievable return.
+    HYPOTHETICAL: always render under the HypotheticalBanner. ``provenance`` fields
+    (``engine_version``, ``commission_bps``, ``slippage_bps``, ``data_note``) make the
+    number reproducible."""
+
+    available: bool
+    strategy: str
+    timeframe: str
+    spec_hash: str
+    engine_version: str
+    symbols_covered: int
+    symbols_total: int
+    total_bars: int
+    metrics: dict[str, float]
+    components: list[PublicTrackRecordComponent]
+    commission_bps: float
+    slippage_bps: float
+    note: str
+    data_note: str

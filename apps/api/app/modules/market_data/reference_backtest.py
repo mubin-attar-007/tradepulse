@@ -40,6 +40,7 @@ from app.modules.backtesting import compute, engine
 from app.modules.backtesting.service import _fingerprint
 from app.modules.backtesting.types import ExecutionConfig
 from app.modules.market_data import repository as md_repo
+from app.modules.market_data import service as md_service
 from app.modules.market_data.models import Instrument
 from app.modules.market_data.repository import BarPoint
 from app.modules.strategies.spec import (
@@ -232,3 +233,151 @@ async def get_reference_summary(session: AsyncSession, instrument: Instrument) -
         spec_hash=summary.spec_hash,
     )
     return summary
+
+
+# --- Public track record (aggregate across the seeded universe) -----------------
+#
+# The landing page shows ONE curated, caveated "track record": the same reference
+# SMA crossover run through the SAME engine over every instrument for which we hold
+# enough history. It is NOT a portfolio, NOT compounded, NOT a real return — it is a
+# per-run illustration of the platform's own backtest engine, aggregated only so the
+# landing page can show a real number instead of a fabricated one (invariant #4). Each
+# component summary is real ``compute_metrics()`` output; the "aggregate" is a simple,
+# transparent average of per-run metrics across the covered symbols.
+
+_AGGREGATED_METRICS = ("total_return", "cagr", "sharpe", "sortino", "max_drawdown", "win_rate")
+
+_DATA_NOTE = (
+    "Runs over the DELAYED historical bars held for each instrument (polled market "
+    "data, not a real-time SIP feed). Only symbols with enough history to warm up the "
+    "slow SMA are included; coverage grows as more data is backfilled."
+)
+
+
+@dataclass(frozen=True, slots=True)
+class TrackRecordComponent:
+    """One symbol's contribution to the aggregate (a single reference run)."""
+
+    symbol: str
+    bars: int
+    start: datetime | None
+    end: datetime | None
+    metrics: dict[str, float]
+
+
+@dataclass(frozen=True, slots=True)
+class TrackRecord:
+    """The curated, caveated public track record.
+
+    ``metrics`` is the mean of each metric across ``components`` (equal-weight, per-run,
+    NOT compounded). ``provenance`` carries the exact engine settings so the number is
+    reproducible. Every consumer must render this under the HypotheticalBanner."""
+
+    available: bool
+    strategy: str
+    timeframe: str
+    spec_hash: str
+    engine_version: str
+    symbols_covered: int
+    symbols_total: int
+    total_bars: int
+    metrics: dict[str, float]
+    components: list[TrackRecordComponent]
+    commission_bps: float
+    slippage_bps: float
+    note: str
+    data_note: str
+
+
+def _empty_track_record(strategy: str, symbols_total: int, note: str) -> TrackRecord:
+    cfg = ExecutionConfig()
+    return TrackRecord(
+        available=False,
+        strategy=strategy,
+        timeframe=REFERENCE_TIMEFRAME,
+        spec_hash="",
+        engine_version="",
+        symbols_covered=0,
+        symbols_total=symbols_total,
+        total_bars=0,
+        metrics={},
+        components=[],
+        commission_bps=cfg.commission_bps,
+        slippage_bps=cfg.slippage_bps,
+        note=note,
+        data_note=_DATA_NOTE,
+    )
+
+
+async def get_track_record(session: AsyncSession) -> TrackRecord:
+    """Aggregate the per-symbol reference backtests across the seeded universe.
+
+    Averages real ``compute_metrics()`` output across every instrument with enough
+    history. Honest by construction: no cherry-picking (ALL covered symbols count),
+    no compounding (per-run average), realistic frictions (default commission +
+    slippage), and an ``available=False`` result when nothing has enough data yet."""
+    instruments = await md_service.list_instruments(session)
+    symbols_total = len(instruments)
+    strategy = f"Reference SMA {_FAST_PERIOD}/{_SLOW_PERIOD} crossover"
+
+    components: list[TrackRecordComponent] = []
+    spec_hash = ""
+    engine_version = ""
+    total_bars = 0
+    for instrument in instruments:
+        summary = await get_reference_summary(session, instrument)
+        if not summary.available:
+            continue
+        spec_hash = spec_hash or summary.spec_hash
+        engine_version = engine_version or summary.engine_version
+        total_bars += summary.bars
+        components.append(
+            TrackRecordComponent(
+                symbol=summary.symbol,
+                bars=summary.bars,
+                start=summary.start,
+                end=summary.end,
+                metrics=summary.metrics,
+            )
+        )
+
+    if not components:
+        return _empty_track_record(
+            strategy,
+            symbols_total,
+            "No instrument has enough history yet to run the reference strategy; "
+            "backfill market data to populate the track record.",
+        )
+
+    aggregate: dict[str, float] = {}
+    for key in _AGGREGATED_METRICS:
+        values = [c.metrics[key] for c in components if key in c.metrics]
+        if values:
+            aggregate[key] = round(sum(values) / len(values), 6)
+    # Trades are summed (a count), not averaged.
+    aggregate["num_trades"] = float(
+        sum(int(c.metrics.get("num_trades", 0)) for c in components)
+    )
+
+    cfg = ExecutionConfig()
+    return TrackRecord(
+        available=True,
+        strategy=strategy,
+        timeframe=REFERENCE_TIMEFRAME,
+        spec_hash=spec_hash,
+        engine_version=engine_version,
+        symbols_covered=len(components),
+        symbols_total=symbols_total,
+        total_bars=total_bars,
+        metrics=aggregate,
+        components=components,
+        commission_bps=cfg.commission_bps,
+        slippage_bps=cfg.slippage_bps,
+        note=(
+            "Hypothetical, un-optimized illustration of the platform's own backtest "
+            "engine — the same SMA crossover run across every covered instrument. "
+            "Per-run, equal-weight average; NOT a portfolio, NOT compounded, NOT a real "
+            "or achievable return, and not a recommendation."
+        ),
+        data_note=_DATA_NOTE,
+    )

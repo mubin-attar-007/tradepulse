@@ -1396,6 +1396,144 @@
         "title": "PublicReferenceSummary",
         "type": "object"
       },
+      "PublicTrackRecordComponent": {
+        "description": "One symbol's reference run inside the aggregate track record.\n\nHYPOTHETICAL / backtested \u2014 render under the HypotheticalBanner with the rest.",
+        "properties": {
+          "bars": {
+            "title": "Bars",
+            "type": "integer"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "metrics": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Metrics",
+            "type": "object"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "bars",
+          "start",
+          "end",
+          "metrics"
+        ],
+        "title": "PublicTrackRecordComponent",
+        "type": "object"
+      },
+      "PublicTrackRecordOut": {
+        "description": "The curated, caveated landing-page track record.\n\nAn equal-weight, per-run AVERAGE of the reference SMA-crossover backtest across the\ncovered universe \u2014 NOT a portfolio, NOT compounded, NOT a real/achievable return.\nHYPOTHETICAL: always render under the HypotheticalBanner. ``provenance`` fields\n(``engine_version``, ``commission_bps``, ``slippage_bps``, ``data_note``) make the\nnumber reproducible.",
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "commission_bps": {
+            "title": "Commission Bps",
+            "type": "number"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/PublicTrackRecordComponent"
+            },
+            "title": "Components",
+            "type": "array"
+          },
+          "data_note": {
+            "title": "Data Note",
+            "type": "string"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "metrics": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Metrics",
+            "type": "object"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "slippage_bps": {
+            "title": "Slippage Bps",
+            "type": "number"
+          },
+          "spec_hash": {
+            "title": "Spec Hash",
+            "type": "string"
+          },
+          "strategy": {
+            "title": "Strategy",
+            "type": "string"
+          },
+          "symbols_covered": {
+            "title": "Symbols Covered",
+            "type": "integer"
+          },
+          "symbols_total": {
+            "title": "Symbols Total",
+            "type": "integer"
+          },
+          "timeframe": {
+            "title": "Timeframe",
+            "type": "string"
+          },
+          "total_bars": {
+            "title": "Total Bars",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "available",
+          "strategy",
+          "timeframe",
+          "spec_hash",
+          "engine_version",
+          "symbols_covered",
+          "symbols_total",
+          "total_bars",
+          "metrics",
+          "components",
+          "commission_bps",
+          "slippage_bps",
+          "note",
+          "data_note"
+        ],
+        "title": "PublicTrackRecordOut",
+        "type": "object"
+      },
       "QuoteOut": {
         "properties": {
           "instrument_id": {
@@ -3204,6 +3342,28 @@
           }
         },
         "summary": "Get Public Bars",
+        "tags": [
+          "public-markets"
+        ]
+      }
+    },
+    "/public/track-record": {
+      "get": {
+        "description": "Curated, caveated aggregate of the reference backtest across the universe.\n\nHYPOTHETICAL: the frontend must render this under the HypotheticalBanner. Every\nnumber is real ``compute_metrics()`` output; the aggregate is an equal-weight,\nper-run average across covered symbols (never compounded, never a real return).",
+        "operationId": "get_public_track_record_public_track_record_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicTrackRecordOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Public Track Record",
         "tags": [
           "public-markets"
         ]
