@@ -2,18 +2,36 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { Providers } from "@/components/providers";
-import { BRAND_DESCRIPTION, BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import { BRAND_DESCRIPTION, BRAND_NAME, BRAND_TAGLINE, SITE_URL } from "@/lib/brand";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
+const TITLE = `${BRAND_NAME} — ${BRAND_TAGLINE}`;
+
 export const metadata: Metadata = {
+  // Resolves relative URLs (canonical, OG/Twitter images from opengraph-image.tsx).
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
+    default: TITLE,
     template: `%s · ${BRAND_NAME}`,
   },
   description: BRAND_DESCRIPTION,
+  applicationName: BRAND_NAME,
+  openGraph: {
+    type: "website",
+    siteName: BRAND_NAME,
+    title: TITLE,
+    description: BRAND_DESCRIPTION,
+    url: SITE_URL,
+    // opengraph-image.tsx supplies the og:image tags automatically.
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: BRAND_DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = { themeColor: "#07090d" };
