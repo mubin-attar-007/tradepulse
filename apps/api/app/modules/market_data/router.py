@@ -3,25 +3,47 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import uuid
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal, InvalidOperation
 
+import numpy as np
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+from pydantic import TypeAdapter, ValidationError
 
 from app.core.config import get_settings
 from app.core.deps import RedisDep, SessionDep
 from app.core.errors import BadRequestError, NotFoundError
 from app.core.logging import get_logger
 from app.modules.auth.deps import CurrentUser
-from app.modules.market_data import realtime, service
+from app.modules.backtesting import compute
+from app.modules.market_data import realtime, service, signal
 from app.modules.market_data import repository as repo
-from app.modules.market_data.schemas import BarOut, InstrumentOut, QuoteOut, WsTicketOut
+from app.modules.market_data.schemas import (
+    BarOut,
+    IndicatorSeriesOut,
+    InstrumentOut,
+    QuoteOut,
+    SignalOut,
+    WsTicketOut,
+)
+from app.modules.strategies.spec import IndicatorSpec, StrategySpec
 
 logger = get_logger("market_data")
 router = APIRouter(prefix="/market", tags=["market-data"])
 
 _TIMEFRAMES = {"1m", "5m", "15m", "1h", "4h", "1d"}
 _MAX_QUEUE = 1000
+# Cap the indicator window so a single request can't pull an unbounded history.
+_MAX_INDICATOR_BARS = 1500
+_INDICATOR_SPEC_LIST = TypeAdapter(list[IndicatorSpec])
+
+# Multi-output indicators expose one series per output; everything else is "value".
+_INDICATOR_OUTPUTS: dict[str, tuple[str, ...]] = {
+    "BBANDS": ("upper", "middle", "lower"),
+    "MACD": ("macd", "signal", "hist"),
+}
 
 
 @router.get("/instruments", response_model=list[InstrumentOut])
@@ -51,6 +73,119 @@ async def get_instrument_bars(
     start = start or (end - timedelta(days=1))
     bars = await repo.get_bars(session, instrument_id, timeframe=timeframe, start=start, end=end)
     return [BarOut.model_validate(bar) for bar in bars]
+
+
+def _serialize_series(raw: np.ndarray, timestamps: list[datetime]) -> list[float | None]:
+    """NaN warm-up -> null, aligned 1:1 with ``timestamps`` (invariant #4: never
+    back-fill fabricated values)."""
+    values: list[float | None] = []
+    for v in raw:
+        f = float(v)
+        values.append(None if math.isnan(f) else f)
+    return values[: len(timestamps)]
+
+
+@router.get("/instruments/{instrument_id}/indicators", response_model=list[IndicatorSeriesOut])
+async def get_instrument_indicators(
+    instrument_id: uuid.UUID,
+    session: SessionDep,
+    _user: CurrentUser,
+    spec: str = Query(description="JSON-encoded list of IndicatorSpec"),
+    timeframe: str = Query(default="1h"),
+    start: datetime | None = Query(default=None),
+    end: datetime | None = Query(default=None),
+) -> list[IndicatorSeriesOut]:
+    """Compute the requested indicators over the instrument's bars.
+
+    Thin wrapper: ``get_bars`` -> ``compute_indicators`` -> serialize (NaN warm-up
+    -> null), reusing the exact causal math the backtest engine uses so the chart
+    draws what a backtest would read at each bar."""
+    if timeframe not in _TIMEFRAMES:
+        raise BadRequestError(f"Unsupported timeframe {timeframe!r}.")
+    try:
+        specs = _INDICATOR_SPEC_LIST.validate_json(spec)
+    except ValidationError as exc:
+        raise BadRequestError(f"Invalid indicator spec: {exc.errors()[0]['msg']}") from exc
+    if not specs:
+        return []
+    ids = [s.id for s in specs]
+    if len(ids) != len(set(ids)):
+        raise BadRequestError("Indicator ids must be unique.")
+
+    if await service.get_instrument(session, instrument_id) is None:
+        raise NotFoundError()
+    end = end or datetime.now(UTC)
+    start = start or (end - timedelta(days=90))
+    bars = await repo.get_bars(session, instrument_id, timeframe=timeframe, start=start, end=end)
+    bars = bars[-_MAX_INDICATOR_BARS:]
+    if not bars:
+        return []
+
+    timestamps = [b.ts for b in bars]
+    df, _ = compute.build_arrays(bars)
+    arrays = compute.compute_indicators(df, specs)
+
+    out: list[IndicatorSeriesOut] = []
+    for s in specs:
+        for output in _INDICATOR_OUTPUTS.get(s.type, ("value",)):
+            key = s.id if output == "value" else f"{s.id}:{output}"
+            raw = arrays.get(f"indicator:{key}")
+            if raw is None:
+                continue
+            out.append(
+                IndicatorSeriesOut(
+                    key=key,
+                    id=s.id,
+                    type=s.type,
+                    output=output,
+                    ts=timestamps,
+                    values=_serialize_series(raw, timestamps),
+                )
+            )
+    return out
+
+
+@router.get("/instruments/{instrument_id}/signal", response_model=SignalOut)
+async def get_instrument_signal(
+    instrument_id: uuid.UUID,
+    session: SessionDep,
+    _user: CurrentUser,
+    spec: str = Query(description="JSON-encoded StrategySpec"),
+    equity: str | None = Query(
+        default=None, description="Decimal buying power for absolute sizing"
+    ),
+) -> SignalOut:
+    """Evaluate a StrategySpec's entry rule on the latest CLOSED bar.
+
+    entry/stop/target/size are real engine math (invariant #4) via the shared engine
+    helpers. The result is an INTENDED order, not executable — live trading is gated
+    (invariant #3). Prices must render under a DELAYED DataBadge on the client."""
+    try:
+        parsed = StrategySpec.model_validate_json(spec)
+    except ValidationError as exc:
+        raise BadRequestError(f"Invalid strategy spec: {exc.errors()[0]['msg']}") from exc
+    equity_dec: Decimal | None = None
+    if equity is not None:
+        try:
+            equity_dec = Decimal(equity)
+        except InvalidOperation as exc:
+            raise BadRequestError("equity must be a decimal number.") from exc
+        if equity_dec <= 0:
+            raise BadRequestError("equity must be positive.")
+
+    instrument = await signal.resolve_instrument(session, instrument_id)
+    result = await signal.evaluate_signal(session, instrument, parsed, equity=equity_dec)
+    return SignalOut(
+        should_enter=result.should_enter,
+        reference_price=result.reference_price,
+        entry=result.entry,
+        stop=result.stop,
+        target=result.target,
+        size=result.size,
+        size_per_10k=result.size_per_10k,
+        as_of=result.as_of,
+        timeframe=result.timeframe,
+    )
 
 
 @router.get("/instruments/{instrument_id}/latest", response_model=QuoteOut)

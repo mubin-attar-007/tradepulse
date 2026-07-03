@@ -43,6 +43,47 @@ class WsTicketOut(BaseModel):
     expires_in: int
 
 
+# --- F2: on-chart indicators + signal card (auth-gated) ------------------------
+
+
+class IndicatorSeriesOut(BaseModel):
+    """One computed indicator series aligned 1:1 with the requested bars.
+
+    ``values`` carries ``null`` during the indicator's warm-up window (the first
+    N-1 points of an N-period indicator) so the client draws honest gaps instead of
+    fabricated values. Multi-output indicators (BBANDS, MACD) surface one entry per
+    output, keyed ``<id>:<output>`` (e.g. ``bb:upper``, ``macd:hist``)."""
+
+    key: str  # operand key: "<id>" or "<id>:<output>"
+    id: str  # the requesting IndicatorSpec id
+    type: str  # EMA | SMA | RSI | ATR | BBANDS | MACD | VWAP | VOL_SMA
+    output: str  # "value" for single-output, else the sub-series name
+    ts: list[datetime]  # bar timestamps (parallel to values)
+    values: list[float | None]
+
+
+class SignalOut(BaseModel):
+    """Point-in-time evaluation of a StrategySpec's entry rule on the latest CLOSED
+    bar. All money is a server-serialized Decimal string (invariant #2).
+
+    This is an INTENDED order, not an executable one — live trading is gated (POST
+    /live/orders returns 403). The client must render prices under a DELAYED
+    DataBadge (invariant #3). ``entry``/``stop``/``target``/``size`` are real engine
+    math (invariant #4); ``size`` is present only when the caller supplied equity,
+    while ``size_per_10k`` (units per $10,000 of buying power) is always present so
+    the client never multiplies a price client-side."""
+
+    should_enter: bool
+    reference_price: Money
+    entry: Money
+    stop: Money | None
+    target: Money | None
+    size: Money | None
+    size_per_10k: Money
+    as_of: datetime
+    timeframe: str
+
+
 # --- Public (unauthenticated) per-ticker SEO surface ---------------------------
 
 

@@ -24,7 +24,7 @@ from app.modules.backtesting.types import (
     Trade,
 )
 from app.modules.market_data.repository import BarPoint
-from app.modules.strategies.spec import ENGINE_VERSION, PositionSizing, StrategySpec
+from app.modules.strategies.spec import ENGINE_VERSION, ExitRule, PositionSizing, StrategySpec
 
 _D0 = Decimal("0")
 
@@ -61,6 +61,47 @@ def _size(
     return _D0
 
 
+def slippage_fraction(config: ExecutionConfig) -> Decimal:
+    """Adverse slippage as a Decimal fraction (0 when frictionless)."""
+    return _D0 if config.frictionless else Decimal(str(config.slippage_bps)) / Decimal(10000)
+
+
+def entry_fill(reference_price: Decimal, slip: Decimal) -> Decimal:
+    """Long entry fill = reference price nudged up by adverse slippage.
+
+    This is the SAME formula the engine applies to the next bar's open
+    (``o * (1 + slip)``); the signal service passes the latest close as the
+    reference so it never reimplements the fill math."""
+    return reference_price * (Decimal(1) + slip)
+
+
+def stop_from_fill(fill: Decimal, exit_rule: ExitRule) -> Decimal | None:
+    """Protective stop from the fill — identical to the engine's bracket math."""
+    if not exit_rule.stop_loss_pct:
+        return None
+    return fill * (Decimal(1) - Decimal(str(exit_rule.stop_loss_pct)))
+
+
+def target_from_fill(fill: Decimal, exit_rule: ExitRule) -> Decimal | None:
+    """Profit target from the fill — identical to the engine's bracket math."""
+    if not exit_rule.take_profit_pct:
+        return None
+    return fill * (Decimal(1) + Decimal(str(exit_rule.take_profit_pct)))
+
+
+def size_for_entry(
+    spec: StrategySpec, equity: Decimal, fill: Decimal, atr: float | None
+) -> Decimal:
+    """Intended position size for a long entry at ``fill`` with ``equity`` of
+    buying power — the SAME ``_size()`` the engine uses, then clamped by
+    ``max_position_pct`` exactly as the engine clamps a real fill."""
+    size = _size(spec.sizing, equity, fill, spec.exit.stop_loss_pct, atr)
+    max_notional = equity * Decimal(str(spec.risk.max_position_pct))
+    if fill > 0 and size * fill > max_notional:
+        size = max_notional / fill
+    return size if size > 0 else _D0
+
+
 def run(
     spec: StrategySpec,
     bars: Sequence[BarPoint],
@@ -71,7 +112,7 @@ def run(
     df, arrays = compute.build_arrays(bars)
     arrays.update(compute.compute_indicators(df, spec.indicators))
 
-    slip = _D0 if config.frictionless else Decimal(str(config.slippage_bps)) / Decimal(10000)
+    slip = slippage_fraction(config)
     comm = _D0 if config.frictionless else Decimal(str(config.commission_bps)) / Decimal(10000)
 
     exit_rule = spec.exit
@@ -161,7 +202,7 @@ def run(
         if not in_pos and pending_entry:
             pending_entry = False
             equity = cash
-            fill = o * (Decimal(1) + slip)
+            fill = entry_fill(o, slip)
             atr_val = float(atr_arr[i]) if atr_arr is not None else None
             size = _size(spec.sizing, equity, fill, exit_rule.stop_loss_pct, atr_val)
             max_notional = equity * Decimal(str(spec.risk.max_position_pct))
@@ -186,16 +227,8 @@ def run(
                 entry_ts = bar.ts
                 entry_i = i
                 highest = h
-                stop_price = (
-                    fill * (Decimal(1) - Decimal(str(exit_rule.stop_loss_pct)))
-                    if exit_rule.stop_loss_pct
-                    else None
-                )
-                target_price = (
-                    fill * (Decimal(1) + Decimal(str(exit_rule.take_profit_pct)))
-                    if exit_rule.take_profit_pct
-                    else None
-                )
+                stop_price = stop_from_fill(fill, exit_rule)
+                target_price = target_from_fill(fill, exit_rule)
 
         # 3) intrabar bracket checks
         if in_pos:

@@ -332,6 +332,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/market/instruments/{instrument_id}/indicators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Instrument Indicators
+         * @description Compute the requested indicators over the instrument's bars.
+         *
+         *     Thin wrapper: ``get_bars`` -> ``compute_indicators`` -> serialize (NaN warm-up
+         *     -> null), reusing the exact causal math the backtest engine uses so the chart
+         *     draws what a backtest would read at each bar.
+         */
+        get: operations["get_instrument_indicators_market_instruments__instrument_id__indicators_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/market/instruments/{instrument_id}/latest": {
         parameters: {
             query?: never;
@@ -341,6 +365,30 @@ export interface paths {
         };
         /** Latest Quote */
         get: operations["latest_quote_market_instruments__instrument_id__latest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/market/instruments/{instrument_id}/signal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Instrument Signal
+         * @description Evaluate a StrategySpec's entry rule on the latest CLOSED bar.
+         *
+         *     entry/stop/target/size are real engine math (invariant #4) via the shared engine
+         *     helpers. The result is an INTENDED order, not executable — live trading is gated
+         *     (invariant #3). Prices must render under a DELAYED DataBadge on the client.
+         */
+        get: operations["get_instrument_signal_market_instruments__instrument_id__signal_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -898,6 +946,29 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * IndicatorSeriesOut
+         * @description One computed indicator series aligned 1:1 with the requested bars.
+         *
+         *     ``values`` carries ``null`` during the indicator's warm-up window (the first
+         *     N-1 points of an N-period indicator) so the client draws honest gaps instead of
+         *     fabricated values. Multi-output indicators (BBANDS, MACD) surface one entry per
+         *     output, keyed ``<id>:<output>`` (e.g. ``bb:upper``, ``macd:hist``).
+         */
+        IndicatorSeriesOut: {
+            /** Id */
+            id: string;
+            /** Key */
+            key: string;
+            /** Output */
+            output: string;
+            /** Ts */
+            ts: string[];
+            /** Type */
+            type: string;
+            /** Values */
+            values: (number | null)[];
+        };
         /** IndicatorSpec */
         IndicatorSpec: {
             /** Id */
@@ -1266,6 +1337,41 @@ export interface components {
              * @default 1
              */
             max_position_pct: number;
+        };
+        /**
+         * SignalOut
+         * @description Point-in-time evaluation of a StrategySpec's entry rule on the latest CLOSED
+         *     bar. All money is a server-serialized Decimal string (invariant #2).
+         *
+         *     This is an INTENDED order, not an executable one — live trading is gated (POST
+         *     /live/orders returns 403). The client must render prices under a DELAYED
+         *     DataBadge (invariant #3). ``entry``/``stop``/``target``/``size`` are real engine
+         *     math (invariant #4); ``size`` is present only when the caller supplied equity,
+         *     while ``size_per_10k`` (units per $10,000 of buying power) is always present so
+         *     the client never multiplies a price client-side.
+         */
+        SignalOut: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Entry */
+            entry: string;
+            /** Reference Price */
+            reference_price: string;
+            /** Should Enter */
+            should_enter: boolean;
+            /** Size */
+            size: string | null;
+            /** Size Per 10K */
+            size_per_10k: string;
+            /** Stop */
+            stop: string | null;
+            /** Target */
+            target: string | null;
+            /** Timeframe */
+            timeframe: string;
         };
         /** StrategyDetailOut */
         StrategyDetailOut: {
@@ -2055,6 +2161,43 @@ export interface operations {
             };
         };
     };
+    get_instrument_indicators_market_instruments__instrument_id__indicators_get: {
+        parameters: {
+            query: {
+                /** @description JSON-encoded list of IndicatorSpec */
+                spec: string;
+                timeframe?: string;
+                start?: string | null;
+                end?: string | null;
+            };
+            header?: never;
+            path: {
+                instrument_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndicatorSeriesOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     latest_quote_market_instruments__instrument_id__latest_get: {
         parameters: {
             query?: never;
@@ -2073,6 +2216,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuoteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_instrument_signal_market_instruments__instrument_id__signal_get: {
+        parameters: {
+            query: {
+                /** @description JSON-encoded StrategySpec */
+                spec: string;
+                /** @description Decimal buying power for absolute sizing */
+                equity?: string | null;
+            };
+            header?: never;
+            path: {
+                instrument_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalOut"];
                 };
             };
             /** @description Validation Error */

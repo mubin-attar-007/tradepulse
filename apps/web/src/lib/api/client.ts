@@ -14,6 +14,11 @@ export type Strategy = components["schemas"]["StrategyOut"];
 export type StrategyDetail = components["schemas"]["StrategyDetailOut"];
 export type BacktestSummary = components["schemas"]["BacktestSummaryOut"];
 export type Backtest = components["schemas"]["BacktestOut"];
+export type IndicatorSeries = components["schemas"]["IndicatorSeriesOut"];
+export type Signal = components["schemas"]["SignalOut"];
+/** The canonical StrategySpec DSL (built client-side, sent as a JSON query param). */
+export type StrategySpec = components["schemas"]["StrategySpec-Input"];
+export type IndicatorSpec = components["schemas"]["IndicatorSpec"];
 
 // Public (unauthenticated) per-ticker SEO surface.
 export type PublicInstrumentSummary = components["schemas"]["PublicInstrumentSummary"];
@@ -145,6 +150,26 @@ export const api = {
     return apiFetch<Bar[]>(`/market/instruments/${id}/bars?${params.toString()}`);
   },
   latest: (id: string) => apiFetch<Quote>(`/market/instruments/${id}/latest`),
+  /**
+   * Compute indicator series over an instrument's bars (auth-gated). `specs` is a
+   * list of IndicatorSpec; it is JSON-encoded into the `spec` query param, matching
+   * the backend contract. NaN warm-up points come back as `null`.
+   */
+  indicators: (id: string, specs: IndicatorSpec[], timeframe: string) => {
+    const params = new URLSearchParams({ spec: JSON.stringify(specs), timeframe });
+    return apiFetch<IndicatorSeries[]>(`/market/instruments/${id}/indicators?${params.toString()}`);
+  },
+  /**
+   * Evaluate a StrategySpec's entry rule on the latest CLOSED bar (auth-gated).
+   * Returns real engine math (entry/stop/target/size). `size` is present only when
+   * `equity` is supplied; `size_per_10k` is always present so the client never does
+   * money math. The result is an INTENDED order — live trading stays gated.
+   */
+  signal: (id: string, spec: StrategySpec, equity?: string) => {
+    const params = new URLSearchParams({ spec: JSON.stringify(spec) });
+    if (equity) params.set("equity", equity);
+    return apiFetch<Signal>(`/market/instruments/${id}/signal?${params.toString()}`);
+  },
   wsTicket: () =>
     apiFetch<{ ticket: string; expires_in: number }>("/market/ws-ticket", { method: "POST" }),
 

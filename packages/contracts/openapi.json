@@ -719,6 +719,59 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "IndicatorSeriesOut": {
+        "description": "One computed indicator series aligned 1:1 with the requested bars.\n\n``values`` carries ``null`` during the indicator's warm-up window (the first\nN-1 points of an N-period indicator) so the client draws honest gaps instead of\nfabricated values. Multi-output indicators (BBANDS, MACD) surface one entry per\noutput, keyed ``<id>:<output>`` (e.g. ``bb:upper``, ``macd:hist``).",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "output": {
+            "title": "Output",
+            "type": "string"
+          },
+          "ts": {
+            "items": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "title": "Ts",
+            "type": "array"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "id",
+          "type",
+          "output",
+          "ts",
+          "values"
+        ],
+        "title": "IndicatorSeriesOut",
+        "type": "object"
+      },
       "IndicatorSpec": {
         "additionalProperties": false,
         "properties": {
@@ -1629,6 +1682,82 @@
           }
         },
         "title": "RiskLimits",
+        "type": "object"
+      },
+      "SignalOut": {
+        "description": "Point-in-time evaluation of a StrategySpec's entry rule on the latest CLOSED\nbar. All money is a server-serialized Decimal string (invariant #2).\n\nThis is an INTENDED order, not an executable one \u2014 live trading is gated (POST\n/live/orders returns 403). The client must render prices under a DELAYED\nDataBadge (invariant #3). ``entry``/``stop``/``target``/``size`` are real engine\nmath (invariant #4); ``size`` is present only when the caller supplied equity,\nwhile ``size_per_10k`` (units per $10,000 of buying power) is always present so\nthe client never multiplies a price client-side.",
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "entry": {
+            "title": "Entry",
+            "type": "string"
+          },
+          "reference_price": {
+            "title": "Reference Price",
+            "type": "string"
+          },
+          "should_enter": {
+            "title": "Should Enter",
+            "type": "boolean"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "size_per_10k": {
+            "title": "Size Per 10K",
+            "type": "string"
+          },
+          "stop": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "timeframe": {
+            "title": "Timeframe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "should_enter",
+          "reference_price",
+          "entry",
+          "stop",
+          "target",
+          "size",
+          "size_per_10k",
+          "as_of",
+          "timeframe"
+        ],
+        "title": "SignalOut",
         "type": "object"
       },
       "StrategyDetailOut": {
@@ -2928,6 +3057,109 @@
         ]
       }
     },
+    "/market/instruments/{instrument_id}/indicators": {
+      "get": {
+        "description": "Compute the requested indicators over the instrument's bars.\n\nThin wrapper: ``get_bars`` -> ``compute_indicators`` -> serialize (NaN warm-up\n-> null), reusing the exact causal math the backtest engine uses so the chart\ndraws what a backtest would read at each bar.",
+        "operationId": "get_instrument_indicators_market_instruments__instrument_id__indicators_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "instrument_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Instrument Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "JSON-encoded list of IndicatorSpec",
+            "in": "query",
+            "name": "spec",
+            "required": true,
+            "schema": {
+              "description": "JSON-encoded list of IndicatorSpec",
+              "title": "Spec",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IndicatorSeriesOut"
+                  },
+                  "title": "Response Get Instrument Indicators Market Instruments  Instrument Id  Indicators Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Instrument Indicators",
+        "tags": [
+          "market-data"
+        ]
+      }
+    },
     "/market/instruments/{instrument_id}/latest": {
       "get": {
         "operationId": "latest_quote_market_instruments__instrument_id__latest_get",
@@ -2966,6 +3198,79 @@
           }
         },
         "summary": "Latest Quote",
+        "tags": [
+          "market-data"
+        ]
+      }
+    },
+    "/market/instruments/{instrument_id}/signal": {
+      "get": {
+        "description": "Evaluate a StrategySpec's entry rule on the latest CLOSED bar.\n\nentry/stop/target/size are real engine math (invariant #4) via the shared engine\nhelpers. The result is an INTENDED order, not executable \u2014 live trading is gated\n(invariant #3). Prices must render under a DELAYED DataBadge on the client.",
+        "operationId": "get_instrument_signal_market_instruments__instrument_id__signal_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "instrument_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Instrument Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "JSON-encoded StrategySpec",
+            "in": "query",
+            "name": "spec",
+            "required": true,
+            "schema": {
+              "description": "JSON-encoded StrategySpec",
+              "title": "Spec",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Decimal buying power for absolute sizing",
+            "in": "query",
+            "name": "equity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Decimal buying power for absolute sizing",
+              "title": "Equity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Instrument Signal",
         "tags": [
           "market-data"
         ]
