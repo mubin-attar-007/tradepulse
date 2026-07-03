@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -179,6 +179,23 @@ async def get_bars(
     return [
         BarPoint(row.bucket, row.open, row.high, row.low, row.close, row.volume) for row in result
     ]
+
+
+async def resolve_symbol(session: AsyncSession, symbol: str) -> Instrument | None:
+    """Case-insensitive symbol lookup for the public API (URL slugs vary in case).
+
+    Only active instruments are resolvable; ``BTC/USD`` and ``btc-usd``-style
+    slugs are normalized by the caller before reaching here. Returns ``None`` when
+    no active instrument matches (the router turns that into a 404)."""
+    return await session.scalar(
+        select(Instrument)
+        .where(
+            func.lower(Instrument.symbol) == symbol.lower(),
+            Instrument.is_active.is_(True),
+        )
+        .order_by(Instrument.symbol)
+        .limit(1)
+    )
 
 
 async def latest_bar(session: AsyncSession, instrument_id: uuid.UUID) -> BarPoint | None:

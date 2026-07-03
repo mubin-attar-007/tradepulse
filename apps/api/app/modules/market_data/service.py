@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.market_data import repository as repo
 from app.modules.market_data.models import Instrument
 
 
@@ -22,3 +23,8 @@ async def list_instruments(
 
 async def get_instrument(session: AsyncSession, instrument_id: uuid.UUID) -> Instrument | None:
     return await session.get(Instrument, instrument_id)
+
+
+async def resolve_symbol(session: AsyncSession, symbol: str) -> Instrument | None:
+    """Case-insensitive symbol -> active Instrument (public per-ticker pages)."""
+    return await repo.resolve_symbol(session, symbol)

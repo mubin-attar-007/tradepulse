@@ -451,6 +451,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/markets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Public Markets
+         * @description Catalog of tickers available on the public pages.
+         */
+        get: operations["list_public_markets_public_markets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/markets/{ticker}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Public Market
+         * @description The full per-ticker bundle: meta + latest (delayed) price + real indicator
+         *     series + the reference-backtest summary.
+         */
+        get: operations["get_public_market_public_markets__ticker__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/markets/{ticker}/bars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Public Bars
+         * @description OHLCV history for the public chart (reuses the shared ``get_bars`` reader).
+         */
+        get: operations["get_public_bars_public_markets__ticker__bars_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ready": {
         parameters: {
             query?: never;
@@ -969,6 +1030,117 @@ export interface components {
             method: "fixed_units" | "percent_equity" | "risk_per_trade" | "atr";
             /** Value */
             value: number;
+        };
+        /**
+         * PublicChartBar
+         * @description OHLCV bar timestamp + values (timestamps parallel the indicator series).
+         */
+        PublicChartBar: {
+            /** Close */
+            close: string;
+            /** High */
+            high: string;
+            /** Low */
+            low: string;
+            /** Open */
+            open: string;
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
+            /** Volume */
+            volume: string;
+        };
+        /**
+         * PublicIndicatorSeries
+         * @description A single indicator's series aligned 1:1 with the bar timestamps.
+         *
+         *     ``values`` may contain ``null`` during the indicator's warm-up window (e.g. the
+         *     first N-1 points of an N-period SMA), so the frontend can render gaps honestly
+         *     rather than back-filling fabricated values.
+         */
+        PublicIndicatorSeries: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Values */
+            values: (number | null)[];
+        };
+        /**
+         * PublicInstrumentSummary
+         * @description Row for the public catalog (`GET /public/markets`).
+         */
+        PublicInstrumentSummary: {
+            /** Asset Class */
+            asset_class: string;
+            /** Name */
+            name: string | null;
+            /** Ticker */
+            ticker: string;
+        };
+        /**
+         * PublicMarketOut
+         * @description Everything the public per-ticker page needs in one bundle.
+         */
+        PublicMarketOut: {
+            /** Exchange */
+            exchange: string | null;
+            /** Indicators */
+            indicators: components["schemas"]["PublicIndicatorSeries"][];
+            instrument: components["schemas"]["PublicInstrumentSummary"];
+            latest: components["schemas"]["PublicPricePoint"] | null;
+            /** Quote Currency */
+            quote_currency: string;
+            reference_backtest: components["schemas"]["PublicReferenceSummary"];
+            /** Timeframe */
+            timeframe: string;
+        };
+        /**
+         * PublicPricePoint
+         * @description Latest real (delayed) price + its as-of timestamp. Always render under a
+         *     DELAYED DataBadge (product invariant #3).
+         */
+        PublicPricePoint: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Price */
+            price: string;
+        };
+        /**
+         * PublicReferenceSummary
+         * @description Reference-backtest summary for the public page.
+         *
+         *     HYPOTHETICAL / backtested — must sit under the HypotheticalBanner. Carries the
+         *     spec name + hash so the illustration is reproducible, never a bare claim.
+         */
+        PublicReferenceSummary: {
+            /** Available */
+            available: boolean;
+            /** Bars */
+            bars: number;
+            /** End */
+            end: string | null;
+            /** Engine Version */
+            engine_version: string;
+            /** Metrics */
+            metrics: {
+                [key: string]: number;
+            };
+            /** Note */
+            note: string;
+            /** Spec Hash */
+            spec_hash: string;
+            /** Start */
+            start: string | null;
+            /** Strategy */
+            strategy: string;
+            /** Timeframe */
+            timeframe: string;
         };
         /** QuoteOut */
         QuoteOut: {
@@ -1981,6 +2153,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaperSessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_public_markets_public_markets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicInstrumentSummary"][];
+                };
+            };
+        };
+    };
+    get_public_market_public_markets__ticker__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicMarketOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_public_bars_public_markets__ticker__bars_get: {
+        parameters: {
+            query?: {
+                timeframe?: string;
+                start?: string | null;
+                end?: string | null;
+            };
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicChartBar"][];
                 };
             };
             /** @description Validation Error */

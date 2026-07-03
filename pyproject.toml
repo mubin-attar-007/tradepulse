@@ -121,6 +121,18 @@ layers = [
     "app.modules.audit",
     "app.core",
 ]
+# Sanctioned exception: the PUBLIC (unauthenticated) per-ticker pages compose a
+# reference backtest, which by definition needs the backtest engine + StrategySpec
+# DSL (both a higher layer). These two market_data modules are pure composition
+# for that read-only public surface — not new domain coupling — so they are the
+# one allowed upward edge. Everything else in market_data stays below backtesting.
+ignore_imports = [
+    "app.modules.market_data.reference_backtest -> app.modules.backtesting.compute",
+    "app.modules.market_data.reference_backtest -> app.modules.backtesting.engine",
+    "app.modules.market_data.reference_backtest -> app.modules.backtesting.service",
+    "app.modules.market_data.reference_backtest -> app.modules.backtesting.types",
+    "app.modules.market_data.reference_backtest -> app.modules.strategies.spec",
+]
 
 [[tool.importlinter.contracts]]
 name = "Kernel is independent of domain modules"

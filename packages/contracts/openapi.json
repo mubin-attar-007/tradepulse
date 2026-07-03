@@ -1135,6 +1135,267 @@
         "title": "PositionSizing",
         "type": "object"
       },
+      "PublicChartBar": {
+        "description": "OHLCV bar timestamp + values (timestamps parallel the indicator series).",
+        "properties": {
+          "close": {
+            "title": "Close",
+            "type": "string"
+          },
+          "high": {
+            "title": "High",
+            "type": "string"
+          },
+          "low": {
+            "title": "Low",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "volume": {
+            "title": "Volume",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ts",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume"
+        ],
+        "title": "PublicChartBar",
+        "type": "object"
+      },
+      "PublicIndicatorSeries": {
+        "description": "A single indicator's series aligned 1:1 with the bar timestamps.\n\n``values`` may contain ``null`` during the indicator's warm-up window (e.g. the\nfirst N-1 points of an N-period SMA), so the frontend can render gaps honestly\nrather than back-filling fabricated values.",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "values"
+        ],
+        "title": "PublicIndicatorSeries",
+        "type": "object"
+      },
+      "PublicInstrumentSummary": {
+        "description": "Row for the public catalog (`GET /public/markets`).",
+        "properties": {
+          "asset_class": {
+            "title": "Asset Class",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "ticker": {
+            "title": "Ticker",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker",
+          "name",
+          "asset_class"
+        ],
+        "title": "PublicInstrumentSummary",
+        "type": "object"
+      },
+      "PublicMarketOut": {
+        "description": "Everything the public per-ticker page needs in one bundle.",
+        "properties": {
+          "exchange": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange"
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/PublicIndicatorSeries"
+            },
+            "title": "Indicators",
+            "type": "array"
+          },
+          "instrument": {
+            "$ref": "#/components/schemas/PublicInstrumentSummary"
+          },
+          "latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicPricePoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quote_currency": {
+            "title": "Quote Currency",
+            "type": "string"
+          },
+          "reference_backtest": {
+            "$ref": "#/components/schemas/PublicReferenceSummary"
+          },
+          "timeframe": {
+            "title": "Timeframe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "instrument",
+          "exchange",
+          "quote_currency",
+          "timeframe",
+          "latest",
+          "indicators",
+          "reference_backtest"
+        ],
+        "title": "PublicMarketOut",
+        "type": "object"
+      },
+      "PublicPricePoint": {
+        "description": "Latest real (delayed) price + its as-of timestamp. Always render under a\nDELAYED DataBadge (product invariant #3).",
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "price": {
+            "title": "Price",
+            "type": "string"
+          }
+        },
+        "required": [
+          "price",
+          "as_of"
+        ],
+        "title": "PublicPricePoint",
+        "type": "object"
+      },
+      "PublicReferenceSummary": {
+        "description": "Reference-backtest summary for the public page.\n\nHYPOTHETICAL / backtested \u2014 must sit under the HypotheticalBanner. Carries the\nspec name + hash so the illustration is reproducible, never a bare claim.",
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "bars": {
+            "title": "Bars",
+            "type": "integer"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "metrics": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Metrics",
+            "type": "object"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "spec_hash": {
+            "title": "Spec Hash",
+            "type": "string"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "strategy": {
+            "title": "Strategy",
+            "type": "string"
+          },
+          "timeframe": {
+            "title": "Timeframe",
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "strategy",
+          "timeframe",
+          "spec_hash",
+          "engine_version",
+          "bars",
+          "start",
+          "end",
+          "metrics",
+          "note"
+        ],
+        "title": "PublicReferenceSummary",
+        "type": "object"
+      },
       "QuoteOut": {
         "properties": {
           "instrument_id": {
@@ -2785,6 +3046,166 @@
         "summary": "Stop",
         "tags": [
           "paper-trading"
+        ]
+      }
+    },
+    "/public/markets": {
+      "get": {
+        "description": "Catalog of tickers available on the public pages.",
+        "operationId": "list_public_markets_public_markets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicInstrumentSummary"
+                  },
+                  "title": "Response List Public Markets Public Markets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Public Markets",
+        "tags": [
+          "public-markets"
+        ]
+      }
+    },
+    "/public/markets/{ticker}": {
+      "get": {
+        "description": "The full per-ticker bundle: meta + latest (delayed) price + real indicator\nseries + the reference-backtest summary.",
+        "operationId": "get_public_market_public_markets__ticker__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicMarketOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Public Market",
+        "tags": [
+          "public-markets"
+        ]
+      }
+    },
+    "/public/markets/{ticker}/bars": {
+      "get": {
+        "description": "OHLCV history for the public chart (reuses the shared ``get_bars`` reader).",
+        "operationId": "get_public_bars_public_markets__ticker__bars_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticker",
+            "required": true,
+            "schema": {
+              "title": "Ticker",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "timeframe",
+            "required": false,
+            "schema": {
+              "default": "1h",
+              "title": "Timeframe",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PublicChartBar"
+                  },
+                  "title": "Response Get Public Bars Public Markets  Ticker  Bars Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Public Bars",
+        "tags": [
+          "public-markets"
         ]
       }
     },
