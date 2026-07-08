@@ -12,6 +12,7 @@ import {
 import { useEffect, useRef } from "react";
 
 import { api, type PublicChartBar } from "@/lib/api/client";
+import { attachOhlcLegend } from "@/lib/chart-legend";
 import { onThemeChange, readChartTheme, type ChartTheme } from "@/lib/chart-theme";
 
 function toTime(iso: string): UTCTimestamp {
@@ -35,7 +36,9 @@ function barToCandle(bar: PublicChartBar): CandlestickData {
  */
 export function PublicChart({ slug, timeframe }: { slug: string; timeframe: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const legendRef = useRef<HTMLDivElement>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const legendApiRef = useRef<ReturnType<typeof attachOhlcLegend> | null>(null);
 
   const { data: bars, isLoading } = useQuery({
     queryKey: ["public-bars", slug, timeframe],
@@ -65,6 +68,9 @@ export function PublicChart({ slug, timeframe }: { slug: string; timeframe: stri
     });
     const series = chart.addSeries(CandlestickSeries, candleOptions(theme));
     seriesRef.current = series;
+    if (legendRef.current) {
+      legendApiRef.current = attachOhlcLegend(chart, series, legendRef.current);
+    }
     const unsubscribe = onThemeChange(() => {
       const next = readChartTheme();
       chart.applyOptions(layoutOptions(next));
@@ -72,6 +78,8 @@ export function PublicChart({ slug, timeframe }: { slug: string; timeframe: stri
     });
     return () => {
       unsubscribe();
+      legendApiRef.current?.dispose();
+      legendApiRef.current = null;
       chart.remove();
       seriesRef.current = null;
     };
@@ -79,8 +87,10 @@ export function PublicChart({ slug, timeframe }: { slug: string; timeframe: stri
 
   useEffect(() => {
     if (seriesRef.current && bars) {
-      seriesRef.current.setData(bars.map(barToCandle));
+      const candles = bars.map(barToCandle);
+      seriesRef.current.setData(candles);
       seriesRef.current.priceScale().applyOptions({});
+      legendApiRef.current?.setLatest(candles.at(-1) ?? null);
     }
   }, [bars]);
 
@@ -90,7 +100,12 @@ export function PublicChart({ slug, timeframe }: { slug: string; timeframe: stri
     <div className="relative">
       <div
         ref={containerRef}
-        className="h-[320px] w-full rounded-lg border border-border bg-card sm:h-[420px]"
+        className="h-[380px] w-full rounded-lg border border-border bg-card sm:h-[440px]"
+      />
+      <div
+        ref={legendRef}
+        aria-hidden
+        className="pointer-events-none absolute left-3 top-3 z-10 rounded-md border border-border/60 bg-background/70 px-2.5 py-1 font-mono text-xs tabular-nums text-foreground backdrop-blur empty:hidden"
       />
       {(isLoading || empty) && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">

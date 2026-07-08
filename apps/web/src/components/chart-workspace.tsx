@@ -17,6 +17,7 @@ import { DataBadge } from "@/components/data-badge";
 import { IndicatorPanel } from "@/components/indicator-panel";
 import { SignalCard } from "@/components/signal-card";
 import { api, type Bar, type IndicatorSeries, type StrategySpec } from "@/lib/api/client";
+import { attachOhlcLegend } from "@/lib/chart-legend";
 import { indicatorColor, onThemeChange, readChartTheme, type ChartTheme } from "@/lib/chart-theme";
 import { INDICATOR_BY_KIND, type IndicatorKind } from "@/lib/indicators";
 import { type LiveBar, useMarketSocket } from "@/lib/market/use-market-socket";
@@ -86,8 +87,10 @@ function referenceSpec(symbol: string): StrategySpec {
 
 export function ChartWorkspace({ instrumentId }: { instrumentId: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const legendRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const legendApiRef = useRef<ReturnType<typeof attachOhlcLegend> | null>(null);
   // Active line series keyed by indicator series key (`<id>` or `<id>:<output>`).
   const lineRef = useRef<Map<string, ISeriesApi<"Line">>>(new Map());
 
@@ -147,6 +150,9 @@ export function ChartWorkspace({ instrumentId }: { instrumentId: string }) {
     const series = chart.addSeries(CandlestickSeries, candleOptions(theme));
     chartRef.current = chart;
     seriesRef.current = series;
+    if (legendRef.current) {
+      legendApiRef.current = attachOhlcLegend(chart, series, legendRef.current);
+    }
     const lines = lineRef.current; // captured for the cleanup closure
     const unsubscribe = onThemeChange(() => {
       const next = readChartTheme();
@@ -155,6 +161,8 @@ export function ChartWorkspace({ instrumentId }: { instrumentId: string }) {
     });
     return () => {
       unsubscribe();
+      legendApiRef.current?.dispose();
+      legendApiRef.current = null;
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
@@ -165,7 +173,9 @@ export function ChartWorkspace({ instrumentId }: { instrumentId: string }) {
   // Load history.
   useEffect(() => {
     if (seriesRef.current && bars) {
-      seriesRef.current.setData(bars.map(barToCandle));
+      const candles = bars.map(barToCandle);
+      seriesRef.current.setData(candles);
+      legendApiRef.current?.setLatest(candles.at(-1) ?? null);
     }
   }, [bars]);
 
@@ -211,13 +221,15 @@ export function ChartWorkspace({ instrumentId }: { instrumentId: string }) {
 
   // Live append (display-only floats; money precision lives server-side).
   useMarketSocket(instrumentId, (bar: LiveBar) => {
-    seriesRef.current?.update({
+    const candle = {
       time: toTime(bar.ts),
       open: Number(bar.open ?? bar.close),
       high: Number(bar.high ?? bar.close),
       low: Number(bar.low ?? bar.close),
       close: Number(bar.close),
-    });
+    };
+    seriesRef.current?.update(candle);
+    legendApiRef.current?.setLatest(candle);
   });
 
   const spec = useMemo(
@@ -234,10 +246,17 @@ export function ChartWorkspace({ instrumentId }: { instrumentId: string }) {
           <DataBadge kind="DELAYED" title="Polled market data — delayed, not a live SIP feed." />
         </span>
       </div>
-      <div
-        ref={containerRef}
-        className="h-[360px] w-full rounded-lg border border-border bg-card sm:h-[460px] md:h-[560px]"
-      />
+      <div className="relative">
+        <div
+          ref={containerRef}
+          className="h-[420px] w-full rounded-lg border border-border bg-card sm:h-[480px] md:h-[560px]"
+        />
+        <div
+          ref={legendRef}
+          aria-hidden
+          className="pointer-events-none absolute left-3 top-3 z-10 rounded-md border border-border/60 bg-background/70 px-2.5 py-1 font-mono text-xs tabular-nums text-foreground backdrop-blur empty:hidden"
+        />
+      </div>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <IndicatorPanel active={active} onToggle={toggle} />
         {spec ? <SignalCard instrumentId={instrumentId} spec={spec} /> : null}

@@ -8,7 +8,7 @@ import {
   type UTCTimestamp,
 } from "lightweight-charts";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { HypotheticalBanner } from "@/components/hypothetical-banner";
@@ -46,6 +46,7 @@ const METRICS: [string, string][] = [
 const PCT = new Set(["total_return", "cagr", "max_drawdown", "win_rate"]);
 
 const LOSS = "#ff5a6a";
+const TRADES_PER_PAGE = 25;
 
 function fmtMetric(key: string, value: number): string {
   if (PCT.has(key)) return `${(value * 100).toFixed(2)}%`;
@@ -92,6 +93,7 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
   const ddRef = useRef<HTMLDivElement>(null);
   const [explanation, setExplanation] = useState<string | null>(null);
   const [loadingExplain, setLoadingExplain] = useState(false);
+  const [tradePage, setTradePage] = useState(0);
 
   useEffect(() => {
     const curve = result.equity_curve;
@@ -168,7 +170,15 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
   }
 
   const metrics = result.metrics ?? {};
-  const trades = result.trades ?? [];
+  const trades = useMemo(() => result.trades ?? [], [result]);
+
+  // Most-recent-first, paginated — every trade is reachable (no silent truncation).
+  const orderedTrades = useMemo(() => [...trades].reverse(), [trades]);
+  const pageCount = Math.max(1, Math.ceil(orderedTrades.length / TRADES_PER_PAGE));
+  const page = Math.min(tradePage, pageCount - 1);
+  const pageStart = page * TRADES_PER_PAGE;
+  const shownTrades = orderedTrades.slice(pageStart, pageStart + TRADES_PER_PAGE);
+
   return (
     <div className="space-y-4">
       <HypotheticalBanner />
@@ -237,9 +247,6 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
             <h2 className="text-sm font-medium text-muted-foreground">
               Trades{" "}
               <span className="tabular-nums text-foreground">({trades.length})</span>
-              {trades.length > 25 ? (
-                <span className="text-muted-foreground"> · showing last 25</span>
-              ) : null}
             </h2>
             <Button variant="outline" size="sm" onClick={() => exportTradesCsv(trades)}>
               Export CSV
@@ -249,18 +256,15 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
             <table className="w-full text-sm">
               <thead className="bg-card text-left text-muted-foreground">
                 <tr>
-                  <th className="px-3 py-2 font-medium">Entry</th>
-                  <th className="px-3 py-2 font-medium">Exit</th>
-                  <th className="px-3 py-2 text-right font-medium">P&amp;L</th>
-                  <th className="px-3 py-2 text-right font-medium">Return</th>
-                  <th className="px-3 py-2 font-medium">Reason</th>
+                  <th scope="col" className="px-3 py-2 font-medium">Entry</th>
+                  <th scope="col" className="px-3 py-2 font-medium">Exit</th>
+                  <th scope="col" className="px-3 py-2 text-right font-medium">P&amp;L</th>
+                  <th scope="col" className="px-3 py-2 text-right font-medium">Return</th>
+                  <th scope="col" className="px-3 py-2 font-medium">Reason</th>
                 </tr>
               </thead>
               <tbody>
-                {[...trades]
-                  .slice(-25)
-                  .reverse()
-                  .map((t) => (
+                {shownTrades.map((t) => (
                     <tr key={`${t.entry_ts}-${t.exit_ts}`} className="border-t border-border">
                       <td className="px-3 py-1.5 text-muted-foreground">
                         {t.entry_ts.replace("T", " ").slice(0, 16)}
@@ -288,6 +292,32 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
               </tbody>
             </table>
           </div>
+          {pageCount > 1 ? (
+            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span className="tabular-nums">
+                Showing {pageStart + 1}–{Math.min(pageStart + TRADES_PER_PAGE, orderedTrades.length)} of{" "}
+                {orderedTrades.length} · most recent first
+              </span>
+              <div className="flex gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTradePage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                >
+                  Prev
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTradePage((p) => Math.min(pageCount - 1, p + 1))}
+                  disabled={page >= pageCount - 1}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
