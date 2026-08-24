@@ -36,9 +36,10 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
-from app.modules.backtesting import compute, engine
-from app.modules.backtesting.service import _fingerprint
+from app.modules.backtesting import engine
+from app.modules.backtesting.service import data_fingerprint
 from app.modules.backtesting.types import ExecutionConfig
+from app.modules.indicators import compute
 from app.modules.market_data import repository as md_repo
 from app.modules.market_data import service as md_service
 from app.modules.market_data.models import Instrument
@@ -152,7 +153,7 @@ class ReferenceSummary:
     bars: int
     start: datetime | None
     end: datetime | None
-    metrics: dict[str, float] = field(default_factory=dict)
+    metrics: dict[str, float | None] = field(default_factory=dict)
     available: bool = True
     note: str = ""
 
@@ -200,14 +201,14 @@ async def get_reference_summary(session: AsyncSession, instrument: Instrument) -
             f"reference SMA {_FAST_PERIOD}/{_SLOW_PERIOD} strategy; backfill more data.",
         )
 
-    fingerprint = _fingerprint(instrument.id, REFERENCE_TIMEFRAME, bars)
+    fingerprint = data_fingerprint(instrument.id, REFERENCE_TIMEFRAME, bars)
     cached = _CACHE.get((symbol, fingerprint))
     if cached is not None:
         return cached
 
     spec = build_reference_spec(symbol)
     # Realistic frictions (default commission + slippage) — never frictionless.
-    result = engine.run(spec, bars, ExecutionConfig())
+    result = engine.run(spec, bars, ExecutionConfig(), calendar=instrument.calendar)
     summary = ReferenceSummary(
         symbol=symbol,
         timeframe=REFERENCE_TIMEFRAME,
@@ -262,7 +263,7 @@ class TrackRecordComponent:
     bars: int
     start: datetime | None
     end: datetime | None
-    metrics: dict[str, float]
+    metrics: dict[str, float | None]
 
 
 @dataclass(frozen=True, slots=True)
@@ -281,7 +282,7 @@ class TrackRecord:
     symbols_covered: int
     symbols_total: int
     total_bars: int
-    metrics: dict[str, float]
+    metrics: dict[str, float | None]
     components: list[TrackRecordComponent]
     commission_bps: float
     slippage_bps: float
@@ -349,15 +350,16 @@ async def get_track_record(session: AsyncSession) -> TrackRecord:
             "backfill market data to populate the track record.",
         )
 
-    aggregate: dict[str, float] = {}
+    aggregate: dict[str, float | None] = {}
     for key in _AGGREGATED_METRICS:
-        values = [c.metrics[key] for c in components if key in c.metrics]
-        if values:
-            aggregate[key] = round(sum(values) / len(values), 6)
+        # A metric that came back None (undefined, or below its sample-size floor)
+        # is EXCLUDED from the average rather than counted as zero — averaging in a
+        # zero for a symbol whose Sharpe could not be computed would drag the
+        # headline number toward zero and present that as a measurement.
+        values = [v for c in components if (v := c.metrics.get(key)) is not None]
+        aggregate[key] = round(sum(values) / len(values), 6) if values else None
     # Trades are summed (a count), not averaged.
-    aggregate["num_trades"] = float(
-        sum(int(c.metrics.get("num_trades", 0)) for c in components)
-    )
+    aggregate["num_trades"] = float(sum(int(c.metrics.get("num_trades") or 0) for c in components))
 
     cfg = ExecutionConfig()
     return TrackRecord(

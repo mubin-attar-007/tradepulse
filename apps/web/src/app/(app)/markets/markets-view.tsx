@@ -5,15 +5,33 @@ import { ChartCandlestick } from "lucide-react";
 import Link from "next/link";
 
 import { LivePrice } from "@/components/live-price";
+import { QueryError } from "@/components/query-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api/client";
 
 export function MarketsView() {
-  const { data: instruments, isLoading } = useQuery({
+  const {
+    data: instruments,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["instruments"],
     queryFn: () => api.instruments(),
   });
+
+  // Order matters: a failed request is NOT an empty universe. Reporting "no markets
+  // available" when the API is down states something false about the platform.
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold">Markets</h1>
+        <QueryError title="Couldn't load markets" error={error} onRetry={() => void refetch()} />
+      </div>
+    );
+  }
 
   if (!isLoading && !instruments?.length) {
     return (
@@ -71,6 +89,10 @@ export function MarketsView() {
           </tbody>
         </table>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Prices are delayed, polled data — not a live feed. Poll cadence is deployment-specific,
+        so the authority on freshness is the fetch time on each DELAYED badge, not an interval.
+      </p>
     </div>
   );
 }

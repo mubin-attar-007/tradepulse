@@ -11,6 +11,7 @@ from app.modules.auth.models import User
 from app.modules.trading.broker_schemas import BrokerConnectionOut
 from app.modules.trading.broker_service import BrokerConnectionService
 from app.modules.trading.live_gate import LiveTradingGate
+from tests.conftest import authenticate
 
 
 def test_gate_refuses_by_default() -> None:
@@ -53,7 +54,7 @@ async def test_tenancy() -> None:
 
 
 async def _login(client: AsyncClient) -> None:
-    await client.post("/auth/register", json={"email": "l@example.com", "password": "password123"})
+    await authenticate(client, "l@example.com")
 
 
 async def test_brokers_require_auth(client: AsyncClient) -> None:

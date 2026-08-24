@@ -1,9 +1,36 @@
+# Prometheus scrape config for the single-VPS stack (compose profile `observability`).
+#
+# /metrics is bearer-gated by METRICS_TOKEN and answers 404 — deliberately, not 401 —
+# when the token is missing or wrong. A scrape config with no credential therefore
+# fails as "target down, 404", which reads like a broken application rather than a
+# missing secret, and the dashboards stay empty with no obvious cause.
+#
+# Prometheus does NOT expand environment variables inside this file, so the token is
+# supplied as a mounted file rather than ${METRICS_TOKEN}. To wire it up:
+#
+#   1. Put the same value as the API's METRICS_TOKEN in `infra/secrets/metrics_token`,
+#      with no trailing newline (Prometheus sends the file's bytes verbatim):
+#        mkdir -p infra/secrets
+#        printf '%s' "$METRICS_TOKEN" > infra/secrets/metrics_token
+#        chmod 600 infra/secrets/metrics_token
+#      (`secrets/` is git-ignored, so this never becomes a committed credential.)
+#   2. Mount it into the prometheus service in infra/compose.prod.yaml:
+#        volumes:
+#          - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+#          - ./secrets/metrics_token:/etc/prometheus/metrics_token:ro   # <- add
+#
+# Verify from the VM: `curl -sf -H "Authorization: Bearer $METRICS_TOKEN" \
+#   http://localhost:8000/metrics | head` must return metrics, and the same call
+# without the header must return 404.
 global:
   scrape_interval: 15s
 
 scrape_configs:
   - job_name: trading-api
     metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/metrics_token
     static_configs:
       - targets: ["api:8000"]
   - job_name: prometheus

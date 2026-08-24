@@ -26,6 +26,7 @@ from app.modules.strategies.spec import (
     RiskLimits,
     StrategySpec,
 )
+from tests.conftest import authenticate
 
 BASE = datetime(2024, 1, 2, 0, 0, tzinfo=UTC)
 END = BASE + timedelta(minutes=40)
@@ -113,7 +114,7 @@ async def test_owner_scoping() -> None:
 
 
 async def _login(client: AsyncClient) -> None:
-    await client.post("/auth/register", json={"email": "r@example.com", "password": "password123"})
+    await authenticate(client, "r@example.com")
 
 
 async def test_backtests_require_auth(client: AsyncClient) -> None:

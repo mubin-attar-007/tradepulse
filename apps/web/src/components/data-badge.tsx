@@ -11,8 +11,13 @@ const STYLES: Record<Provenance, string> = {
 };
 
 /**
- * Data-provenance chip (TradingView-style). We never claim "LIVE" for polled/delayed data —
- * a bare price number with no provenance is a tout tell.
+ * Data-provenance chip. A bare price with no provenance is a tout tell, so every number
+ * sourced from market data or a simulated ledger wears one of these.
+ *
+ * `LIVE` is defined and deliberately never used: the ingestion path is a periodic REST
+ * poll, so there is no live feed to label. It stays in the union so the day a real
+ * streaming source exists there is one obvious place to wire it — not so that someone
+ * reaches for it to make delayed data look better.
  */
 export function DataBadge({ kind, title }: { kind: Provenance; title?: string }) {
   return (

@@ -26,6 +26,7 @@ from app.modules.strategies.spec import (
     StrategySpec,
 )
 from app.modules.trading.service import PaperService
+from tests.conftest import authenticate
 
 BASE = datetime(2024, 1, 2, 0, 0, tzinfo=UTC)
 
@@ -134,7 +135,7 @@ async def test_stop() -> None:
 
 
 async def _login(client: AsyncClient) -> None:
-    await client.post("/auth/register", json={"email": "p@example.com", "password": "password123"})
+    await authenticate(client, "p@example.com")
 
 
 async def test_paper_requires_auth(client: AsyncClient) -> None:

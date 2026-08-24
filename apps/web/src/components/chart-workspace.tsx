@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { DataBadge } from "@/components/data-badge";
 import { IndicatorPanel } from "@/components/indicator-panel";
+import { QueryError } from "@/components/query-error";
 import { SignalCard } from "@/components/signal-card";
 import { api, type Bar, type IndicatorSeries, type StrategySpec } from "@/lib/api/client";
 import { attachOhlcLegend } from "@/lib/chart-legend";
@@ -96,13 +97,30 @@ export function ChartWorkspace({ instrumentId }: { instrumentId: string }) {
 
   const [active, setActive] = useState<Set<IndicatorKind>>(new Set());
 
-  const { data: instruments } = useQuery({ queryKey: ["instruments"], queryFn: () => api.instruments() });
+  const {
+    data: instruments,
+    isError: instrumentsFailed,
+    error: instrumentsError,
+    refetch: refetchInstruments,
+  } = useQuery({ queryKey: ["instruments"], queryFn: () => api.instruments() });
   const instrument = instruments?.find((i) => i.id === instrumentId);
 
-  const { data: bars, isLoading } = useQuery({
+  const {
+    data: bars,
+    isLoading,
+    isError: barsFailed,
+    error: barsError,
+    refetch: refetchBars,
+  } = useQuery({
     queryKey: ["bars", instrumentId],
     queryFn: () => api.bars(instrumentId, TIMEFRAME),
   });
+
+  // A blank <canvas> sitting next to a DELAYED badge is indistinguishable from "this
+  // instrument simply has no bars yet" — so a 500 reads to the user as a quiet fact about
+  // the market instead of a broken request. Failure is its own state (invariant #4), which
+  // here means the chart container is REPLACED, not left empty.
+  const chartFailed = barsFailed || instrumentsFailed;
 
   // Specs for the currently-active indicators (stable ref for the query key).
   const activeDefs = useMemo(
@@ -127,6 +145,12 @@ export function ChartWorkspace({ instrumentId }: { instrumentId: string }) {
   }
 
   // Create the chart once; recolor in place when the theme class on <html> flips.
+  //
+  // `chartFailed` is a real dependency, not defensive noise: the error branch below unmounts
+  // the container div, and a `[]`-dep effect never re-runs on a JSX swap — it would keep a
+  // handle on the detached node and leave the chart permanently blank after a successful
+  // retry. Re-running tears the old chart down and rebuilds into the fresh node, which is
+  // also why the two data effects below carry the same flag: they are what repopulates it.
   useEffect(() => {
     if (!containerRef.current) return;
     const layoutOptions = (theme: ChartTheme) => ({
@@ -168,7 +192,7 @@ export function ChartWorkspace({ instrumentId }: { instrumentId: string }) {
       seriesRef.current = null;
       lines.clear();
     };
-  }, []);
+  }, [chartFailed]);
 
   // Load history.
   useEffect(() => {
@@ -177,7 +201,7 @@ export function ChartWorkspace({ instrumentId }: { instrumentId: string }) {
       seriesRef.current.setData(candles);
       legendApiRef.current?.setLatest(candles.at(-1) ?? null);
     }
-  }, [bars]);
+  }, [bars, chartFailed]);
 
   // Reconcile indicator line series with the active toggles + fetched data.
   useEffect(() => {
@@ -217,7 +241,7 @@ export function ChartWorkspace({ instrumentId }: { instrumentId: string }) {
       }
       line.setData(toLineData(series));
     }
-  }, [indicatorSeries, activeDefs]);
+  }, [indicatorSeries, activeDefs, chartFailed]);
 
   // Live append (display-only floats; money precision lives server-side).
   useMarketSocket(instrumentId, (bar: LiveBar) => {
@@ -246,17 +270,37 @@ export function ChartWorkspace({ instrumentId }: { instrumentId: string }) {
           <DataBadge kind="DELAYED" title="Polled market data — delayed, not a live SIP feed." />
         </span>
       </div>
-      <div className="relative">
-        <div
-          ref={containerRef}
-          className="h-[420px] w-full rounded-lg border border-border bg-card sm:h-[480px] md:h-[560px]"
+      {chartFailed ? (
+        <QueryError
+          title="Couldn't load this chart"
+          error={barsFailed ? barsError : instrumentsError}
+          onRetry={() => {
+            if (barsFailed) void refetchBars();
+            if (instrumentsFailed) void refetchInstruments();
+          }}
         />
-        <div
-          ref={legendRef}
-          aria-hidden
-          className="pointer-events-none absolute left-3 top-3 z-10 rounded-md border border-border/60 bg-background/70 px-2.5 py-1 font-mono text-xs tabular-nums text-foreground backdrop-blur empty:hidden"
-        />
-      </div>
+      ) : (
+        <div className="relative">
+          {/* lightweight-charts paints into a <canvas>, which is opaque to assistive tech.
+              role="img" + a label at least names what the region is; the OHLC legend below
+              is the live text alternative for the values under the crosshair. */}
+          <div
+            ref={containerRef}
+            role="img"
+            aria-label={`${TIMEFRAME} delayed candlestick chart for ${instrument?.symbol ?? "the selected instrument"}${
+              active.size ? ` with ${[...active].join(", ")} indicators` : ""
+            }`}
+            className="h-[420px] w-full rounded-lg border border-border bg-card sm:h-[480px] md:h-[560px]"
+          />
+          <div
+            ref={legendRef}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="pointer-events-none absolute left-3 top-3 z-10 rounded-md border border-border/60 bg-background/70 px-2.5 py-1 font-mono text-xs tabular-nums text-foreground backdrop-blur empty:hidden"
+          />
+        </div>
+      )}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <IndicatorPanel active={active} onToggle={toggle} />
         {spec ? <SignalCard instrumentId={instrumentId} spec={spec} /> : null}

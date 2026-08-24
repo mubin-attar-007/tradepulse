@@ -25,6 +25,7 @@ os.environ.setdefault("BROKER_CRED_KEY", base64.b64encode(b"0" * 32).decode())
 
 import asyncpg
 import pytest_asyncio
+from httpx import AsyncClient, Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -32,9 +33,14 @@ from app.core.config import get_settings
 
 get_settings.cache_clear()
 
+# Every domain table, truncated between tests. Listing them explicitly (rather than
+# reflecting) makes a forgotten table a visible omission in review: a table missing
+# here leaks rows across tests and produces order-dependent failures that are
+# miserable to diagnose.
 _TABLES = (
     "users, user_credentials, broker_connections, audit_log, ohlcv, "
-    "instrument_sources, instruments, paper_sessions, backtests, strategy_versions, strategies"
+    "instrument_sources, instruments, paper_sessions, alerts, backtests, experiments, "
+    "strategy_versions, strategies"
 )
 
 
@@ -92,3 +98,27 @@ async def client() -> AsyncIterator[object]:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             yield ac
+
+
+async def authenticate(
+    client: AsyncClient,
+    email: str = "test@example.com",
+    password: str = "password123",
+) -> Response:
+    """Register (or log in) and arm the client for state-changing requests.
+
+    Cookie-authenticated unsafe requests must carry the double-submit CSRF header,
+    so a test client that only holds the session cookie is not actually a signed-in
+    browser — it is exactly the shape of request the protection exists to reject.
+    This helper mirrors what the frontend does: read the JS-readable ``csrf_token``
+    cookie and echo it in ``X-CSRF-Token`` on every later call.
+    """
+    from app.core.security import CSRF_COOKIE, CSRF_HEADER
+
+    response = await client.post("/auth/register", json={"email": email, "password": password})
+    if response.status_code >= 400:
+        response = await client.post("/auth/login", json={"email": email, "password": password})
+    token = client.cookies.get(CSRF_COOKIE)
+    if token:
+        client.headers[CSRF_HEADER] = token
+    return response

@@ -49,6 +49,11 @@ export function CalculatorView() {
   const [entry, setEntry] = useState("100");
   const [stop, setStop] = useState("95");
   const [result, setResult] = useState<PositionSizeResult | null>(null);
+  // Whether the request that produced `result` actually carried a stop. Tracked beside the
+  // result rather than derived from `method`, because the user can flip the method after a
+  // run — and relabelling an already-computed figure under the other method's rules would
+  // be the same class of mislabel this panel exists to avoid.
+  const [resultHadStop, setResultHadStop] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const needsStop = method === "risk_per_trade";
@@ -73,6 +78,7 @@ export function CalculatorView() {
         stop: needsStop ? stop : null,
       });
       setResult(res);
+      setResultHadStop(needsStop);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Could not compute size.";
       toast({ description: message, variant: "error" });
@@ -121,7 +127,7 @@ export function CalculatorView() {
                     </Toggle>
                   ))}
                 </div>
-                <p className="mt-1.5 text-[11px] text-muted-foreground/70">
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
                   {METHODS.find((m) => m.id === method)?.hint}
                 </p>
               </div>
@@ -210,19 +216,38 @@ export function CalculatorView() {
               Result
             </div>
             {result ? (
+              /* Exposure and risk are DIFFERENT numbers and were previously conflated:
+                 `pct_of_equity` is notional/equity (apps/api .../trading/calc.py), i.e. how
+                 much capital is deployed, while `risk_amount` is what is actually lost if
+                 the stop trades through. Labelling the former "portfolio risk" reads ~20%
+                 at the default inputs where the true risk is 1% — in a sizing tool whose
+                 entire job is risk communication, that is the worst possible mislabel. Each
+                 row now names exactly the quantity the API returns. */
               <dl className="space-y-3">
                 <Row label="Shares" value={shares(result.qty)} big />
-                <Row label="Notional" value={money(result.notional)} />
-                <Row label="Risk amount" value={money(result.risk_amount)} />
-                <Row label="Portfolio risk" value={pct(result.pct_of_equity)} />
+                <Row label="Position notional" value={money(result.notional)} />
+                <Row label="Notional as % of equity" value={pct(result.pct_of_equity)} />
+                {/* When no stop was sent the API returns `risk_amount = 0` (apps/api
+                    .../trading/calc.py). That zero means "undefined", not "nothing at
+                    risk" — rendering it as a confident "$0.00" tells a trader their
+                    downside is bounded at nothing. Show the absence instead. */}
+                <Row
+                  label="At risk (entry → stop)"
+                  value={resultHadStop ? money(result.risk_amount) : "—"}
+                  hint={
+                    resultHadStop
+                      ? "What this position loses if the stop is reached — the only figure here that is a loss."
+                      : "This method sizes without a stop, so it defines no loss point to price. Use “Risk per trade” to size from one."
+                  }
+                />
               </dl>
             ) : (
               <p className="text-sm text-muted-foreground">
                 Enter your account size, entry, and stop, then calculate to see the suggested share
-                count and portfolio exposure.
+                count, the notional it deploys, and the amount at risk between entry and stop.
               </p>
             )}
-            <p className="flex items-start gap-1.5 border-t border-border pt-3 text-[11px] text-muted-foreground/70">
+            <p className="flex items-start gap-1.5 border-t border-border pt-3 text-[11px] text-muted-foreground">
               <Info size={12} className="mt-0.5 shrink-0" />
               All figures are computed server-side as exact decimals from the engine&apos;s sizing
               math; nothing is calculated in your browser.
@@ -234,10 +259,24 @@ export function CalculatorView() {
   );
 }
 
-function Row({ label, value, big }: { label: string; value: string; big?: boolean }) {
+function Row({
+  label,
+  value,
+  big,
+  hint,
+}: {
+  label: string;
+  value: string;
+  big?: boolean;
+  hint?: string;
+}) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dt className="text-sm text-muted-foreground">
+        {label}
+        {/* Kept inside <dt> so the <dl> stays spec-valid (a dl > div may only hold dt/dd). */}
+        {hint ? <span className="mt-0.5 block text-[11px] leading-snug">{hint}</span> : null}
+      </dt>
       <dd className={`tabular-nums ${big ? "text-2xl font-semibold" : "text-sm font-medium"}`}>
         {value}
       </dd>

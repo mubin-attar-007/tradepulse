@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the committed contract. Both READMEs link to this file as the authoritative
+# frontend environment reference, so `.env*` swallowing it makes that link dead in a clone.
+!.env.example
 
 # vercel
 .vercel

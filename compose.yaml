@@ -2,7 +2,7 @@
 # Prod uses a separate hardened compose in infra/ (later phase).
 services:
   db:
-    image: timescale/timescaledb:2.17.2-pg16
+    image: timescale/timescaledb:2.18.2-pg16
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-trading}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trading}

@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
 
+import { QueryError } from "@/components/query-error";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,7 +46,7 @@ function detailLine(alert: Alert): string {
 }
 
 export function AlertFeed() {
-  const { data: alerts, isLoading } = useQuery({
+  const { data: alerts, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["alerts"],
     queryFn: () => api.alerts(),
     // Alerts are produced by the ~30s paper-session cron; poll so the feed stays fresh.
@@ -62,12 +63,20 @@ export function AlertFeed() {
     );
   }
 
+  // A feed that cannot be fetched is not a quiet feed. Distinguish the two, otherwise
+  // a user whose sessions ARE firing alerts is told nothing is happening.
+  if (isError) {
+    return (
+      <QueryError title="Couldn't load alerts" error={error} onRetry={() => void refetch()} />
+    );
+  }
+
   if (!alerts?.length) {
     return (
       <EmptyState
         icon={Bell}
-        title="No alerts yet"
-        description="Entry/exit fills and risk-control events from your running paper sessions will appear here — and, if email is configured, land in your inbox."
+        title="Nothing recorded yet"
+        description="Simulated entry/exit fills and risk-control events from your paper sessions will appear here as the engine produces them."
       />
     );
   }
@@ -89,7 +98,10 @@ export function AlertFeed() {
                 </span>
               </div>
             </div>
-            <time className="shrink-0 text-xs tabular-nums text-muted-foreground/70">
+            <time
+              dateTime={alert.created_at}
+              className="shrink-0 text-xs tabular-nums text-muted-foreground"
+            >
               {formatWhen(alert.created_at)}
             </time>
           </li>

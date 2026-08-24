@@ -1,10 +1,14 @@
 import { ImageResponse } from "next/og";
 
-import { BRAND_NAME } from "@/lib/brand";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 
 // Branded 1200x630 social card. Rendered by satori: inline styles only, explicit
 // display:flex on any element with >1 child, system fonts, no network fetches.
-export const alt = `${BRAND_NAME} — honest, look-ahead-free backtesting`;
+//
+// Social platforms cache this image aggressively and it travels further than any page
+// on the site, so it is the LAST place a claim should outrun the product. Every line
+// below has to survive the /methodology page's "what we don't claim" list.
+export const alt = `${BRAND_NAME} — look-ahead-free historical simulation`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -97,7 +101,7 @@ export default function OpengraphImage() {
               color: FG,
             }}
           >
-            Honest, look-ahead-free
+            Look-ahead-free
           </div>
           <div
             style={{
@@ -113,7 +117,7 @@ export default function OpengraphImage() {
               marginTop: "6px",
             }}
           >
-            backtesting.
+            simulation.
           </div>
           <div
             style={{
@@ -125,8 +129,8 @@ export default function OpengraphImage() {
               maxWidth: "900px",
             }}
           >
-            Net of commission &amp; slippage, measured against buy &amp; hold — every
-            result reproducible. For US equities and crypto.
+            Net of modelled commission &amp; slippage, spec-hashed and reproducible.
+            Hypothetical results for US equities and crypto.
           </div>
         </div>
 
@@ -143,7 +147,7 @@ export default function OpengraphImage() {
           }}
         >
           <span style={{ display: "flex", color: FG, fontWeight: 600 }}>
-            AI-Powered Trading Intelligence
+            {BRAND_TAGLINE}
           </span>
           <span style={{ display: "flex" }}>·</span>
           <span style={{ display: "flex" }}>Not investment advice</span>

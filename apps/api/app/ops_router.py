@@ -8,34 +8,43 @@ interactive shell.
   CLI, exposed as an endpoint so it works without a shell).
 
 Both are hidden from the API schema and return 404 unless ``TICK_SECRET`` is set
-and the ``key`` matches — so they're never open endpoints.
+and the presented secret matches — so they're never open endpoints.
+
+Prefer ``Authorization: Bearer <TICK_SECRET>``; the ``?key=`` query parameter is
+still accepted for schedulers that cannot set headers, but a secret in a URL is
+copied into proxy and host access logs, so it is the fallback, not the default.
 """
 
 from __future__ import annotations
 
-import hmac
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
+from starlette.requests import Request
 
 from app.core.config import get_settings
 from app.core.logging import get_logger
+from app.core.security import bearer_token, constant_time_compare
 
 router = APIRouter(tags=["ops"])
 logger = get_logger("ops")
 
 
-def _require_secret(key: str) -> None:
+def _require_secret(request: Request, key: str) -> None:
     # 404 (not 403) so a disabled/wrong-key request is indistinguishable from
-    # "not found". Constant-time compare avoids timing leaks.
+    # "not found" — but only if the wrong-key path can't answer differently.
+    # ``hmac.compare_digest`` on a str raises TypeError for non-ASCII input, so
+    # `?key=é` used to 500 whenever the secret WAS set: a 500-vs-404 oracle that
+    # told an attacker the endpoint is armed. constant_time_compare works on bytes.
     secret = get_settings().tick_secret
-    if not secret or not hmac.compare_digest(key, secret):
+    presented = bearer_token(request) or key
+    if not constant_time_compare(presented, secret):
         raise HTTPException(status_code=404)
 
 
 @router.post("/internal/tick", include_in_schema=False)
-async def tick(key: str = Query(default="")) -> dict[str, Any]:
-    _require_secret(key)
+async def tick(request: Request, key: str = Query(default="")) -> dict[str, Any]:
+    _require_secret(request, key)
     settings = get_settings()
 
     from app.core.db import get_sessionmaker
@@ -65,11 +74,13 @@ async def tick(key: str = Query(default="")) -> dict[str, Any]:
 
 
 @router.post("/internal/backfill", include_in_schema=False)
-async def backfill(symbol: str, days: int = 2, key: str = Query(default="")) -> dict[str, Any]:
+async def backfill(
+    request: Request, symbol: str, days: int = 2, key: str = Query(default="")
+) -> dict[str, Any]:
     """Load historical 1m bars for one seeded symbol via its primary provider.
     Lets you seed history on hosts with no shell (HF Spaces). Synchronous; keep
     ``days`` small so it finishes within the host's request timeout."""
-    _require_secret(key)
+    _require_secret(request, key)
     settings = get_settings()
     days = max(1, min(days, 30))
 

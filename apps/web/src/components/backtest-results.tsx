@@ -48,7 +48,15 @@ const PCT = new Set(["total_return", "cagr", "max_drawdown", "win_rate"]);
 const LOSS = "#ff5a6a";
 const TRADES_PER_PAGE = 25;
 
-function fmtMetric(key: string, value: number): string {
+/**
+ * A metric the server withheld arrives as `null`, and that is information, not a
+ * gap: an annualized figure is suppressed below a documented sample-size floor, and
+ * a ratio with no denominator (profit factor with no losing trade) is undefined
+ * rather than zero. Rendering "n/a" is the honest answer; coercing null to 0 would
+ * present "we could not measure this" as "this measured zero".
+ */
+function fmtMetric(key: string, value: number | null | undefined): string {
+  if (value === null || value === undefined) return "n/a";
   if (PCT.has(key)) return `${(value * 100).toFixed(2)}%`;
   if (key === "num_trades") return String(value);
   return value.toFixed(2);
@@ -135,6 +143,14 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
       lineWidth: 2,
       priceFormat: { type: "price", precision: 1, minMove: 0.1 },
     });
+    // The one place this UI derives a number from money strings, and the exception is
+    // deliberate. `drawdownSeries()` divides float-cast equity by its running peak to get a
+    // percentage SHAPE for the underwater plot — it is display-only geometry over the
+    // server's own equity curve, never rendered as currency and never summed across records.
+    // The authoritative risk figure the user reads, `metrics.max_drawdown`, is computed
+    // server-side (apps/api .../backtesting/metrics.py) and shown in the metric grid; this
+    // chart only draws its outline and must never become the source of a quoted number.
+    // Anything a user could mistake for a money amount still has to arrive as a string.
     ddSeries.setData(drawdownSeries(curve));
     ddChart.timeScale().fitContent();
 
@@ -172,6 +188,22 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
   const metrics = result.metrics ?? {};
   const trades = useMemo(() => result.trades ?? [], [result]);
 
+  // Text alternatives for the two <canvas> charts. A screen-reader user previously got
+  // nothing at all from the app's core visualisations; these at least convey the shape of
+  // the run — span, endpoints, worst drawdown — using values the server already computed.
+  const curve = result.equity_curve ?? [];
+  const first = curve[0];
+  const last = curve[curve.length - 1];
+  const equityLabel =
+    first && last
+      ? `Equity curve over ${curve.length} points, ${first.ts.slice(0, 10)} to ` +
+        `${last.ts.slice(0, 10)}. Starts at ${first.equity} and ends at ${last.equity}.`
+      : "Equity curve: no data for this run.";
+  const drawdownLabel =
+    typeof metrics.max_drawdown === "number"
+      ? `Underwater drawdown chart. Worst drawdown ${fmtMetric("max_drawdown", metrics.max_drawdown)}.`
+      : "Underwater drawdown chart.";
+
   // Most-recent-first, paginated — every trade is reachable (no silent truncation).
   const orderedTrades = useMemo(() => [...trades].reverse(), [trades]);
   const pageCount = Math.max(1, Math.ceil(orderedTrades.length / TRADES_PER_PAGE));
@@ -204,8 +236,9 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
         ) : null}
       </div>
       <p className="text-[11px] leading-relaxed text-muted-foreground">
-        Returns are net of modeled costs — commission 2&nbsp;bps/side + slippage 1&nbsp;bps. Sharpe
-        &amp; Sortino are annualized with a risk-free rate of 0.{" "}
+        Output of a historical simulation under these assumptions — net of modeled costs
+        (commission 2&nbsp;bps/side + slippage 1&nbsp;bps), Sharpe &amp; Sortino annualized with a
+        risk-free rate of 0. Hypothetical, and not predictive of future performance.{" "}
         <Link href="/methodology" className="underline underline-offset-2 hover:text-foreground">
           How these numbers are computed
         </Link>
@@ -216,6 +249,8 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
         <div className="text-xs uppercase tracking-wide text-muted-foreground">Equity curve</div>
         <div
           ref={equityRef}
+          role="img"
+          aria-label={equityLabel}
           className="h-[240px] w-full rounded-lg border border-border bg-card md:h-[320px]"
         />
       </div>
@@ -226,6 +261,8 @@ export function BacktestResults({ result: raw }: { result: Record<string, unknow
         </div>
         <div
           ref={ddRef}
+          role="img"
+          aria-label={drawdownLabel}
           className="h-[140px] w-full rounded-lg border border-border bg-card"
         />
       </div>

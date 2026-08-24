@@ -6,7 +6,6 @@ import asyncio
 import math
 import uuid
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal, InvalidOperation
 
 import numpy as np
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
@@ -17,18 +16,17 @@ from app.core.deps import RedisDep, SessionDep
 from app.core.errors import BadRequestError, NotFoundError
 from app.core.logging import get_logger
 from app.modules.auth.deps import CurrentUser
-from app.modules.backtesting import compute
-from app.modules.market_data import realtime, service, signal
+from app.modules.indicators import catalog, compute
+from app.modules.indicators.catalog import IndicatorSpec
+from app.modules.market_data import realtime, service
 from app.modules.market_data import repository as repo
 from app.modules.market_data.schemas import (
     BarOut,
     IndicatorSeriesOut,
     InstrumentOut,
     QuoteOut,
-    SignalOut,
     WsTicketOut,
 )
-from app.modules.strategies.spec import IndicatorSpec, StrategySpec
 
 logger = get_logger("market_data")
 router = APIRouter(prefix="/market", tags=["market-data"])
@@ -38,12 +36,6 @@ _MAX_QUEUE = 1000
 # Cap the indicator window so a single request can't pull an unbounded history.
 _MAX_INDICATOR_BARS = 1500
 _INDICATOR_SPEC_LIST = TypeAdapter(list[IndicatorSpec])
-
-# Multi-output indicators expose one series per output; everything else is "value".
-_INDICATOR_OUTPUTS: dict[str, tuple[str, ...]] = {
-    "BBANDS": ("upper", "middle", "lower"),
-    "MACD": ("macd", "signal", "hist"),
-}
 
 
 def _ensure_utc(value: datetime) -> datetime:
@@ -137,7 +129,7 @@ async def get_instrument_indicators(
 
     out: list[IndicatorSeriesOut] = []
     for s in specs:
-        for output in _INDICATOR_OUTPUTS.get(s.type, ("value",)):
+        for output in catalog.outputs_for(s.type):
             key = s.id if output == "value" else f"{s.id}:{output}"
             raw = arrays.get(f"indicator:{key}")
             if raw is None:
@@ -153,49 +145,6 @@ async def get_instrument_indicators(
                 )
             )
     return out
-
-
-@router.get("/instruments/{instrument_id}/signal", response_model=SignalOut)
-async def get_instrument_signal(
-    instrument_id: uuid.UUID,
-    session: SessionDep,
-    _user: CurrentUser,
-    spec: str = Query(description="JSON-encoded StrategySpec"),
-    equity: str | None = Query(
-        default=None, description="Decimal buying power for absolute sizing"
-    ),
-) -> SignalOut:
-    """Evaluate a StrategySpec's entry rule on the latest CLOSED bar.
-
-    entry/stop/target/size are real engine math (invariant #4) via the shared engine
-    helpers. The result is an INTENDED order, not executable — live trading is gated
-    (invariant #3). Prices must render under a DELAYED DataBadge on the client."""
-    try:
-        parsed = StrategySpec.model_validate_json(spec)
-    except ValidationError as exc:
-        raise BadRequestError(f"Invalid strategy spec: {exc.errors()[0]['msg']}") from exc
-    equity_dec: Decimal | None = None
-    if equity is not None:
-        try:
-            equity_dec = Decimal(equity)
-        except InvalidOperation as exc:
-            raise BadRequestError("equity must be a decimal number.") from exc
-        if equity_dec <= 0:
-            raise BadRequestError("equity must be positive.")
-
-    instrument = await signal.resolve_instrument(session, instrument_id)
-    result = await signal.evaluate_signal(session, instrument, parsed, equity=equity_dec)
-    return SignalOut(
-        should_enter=result.should_enter,
-        reference_price=result.reference_price,
-        entry=result.entry,
-        stop=result.stop,
-        target=result.target,
-        size=result.size,
-        size_per_10k=result.size_per_10k,
-        as_of=result.as_of,
-        timeframe=result.timeframe,
-    )
 
 
 @router.get("/instruments/{instrument_id}/latest", response_model=QuoteOut)

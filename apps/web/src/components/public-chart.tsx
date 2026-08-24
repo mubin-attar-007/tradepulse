@@ -34,7 +34,16 @@ function barToCandle(bar: PublicChartBar): CandlestickData {
  * ChartWorkspace it takes a slug (not an instrument id), fetches delayed OHLCV via
  * the public API, and has NO live WebSocket append — public data is delayed.
  */
-export function PublicChart({ slug, timeframe }: { slug: string; timeframe: string }) {
+export function PublicChart({
+  slug,
+  timeframe,
+  label,
+}: {
+  slug: string;
+  timeframe: string;
+  /** Human name of the instrument, for the chart's text alternative. */
+  label?: string;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const legendRef = useRef<HTMLDivElement>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -89,7 +98,6 @@ export function PublicChart({ slug, timeframe }: { slug: string; timeframe: stri
     if (seriesRef.current && bars) {
       const candles = bars.map(barToCandle);
       seriesRef.current.setData(candles);
-      seriesRef.current.priceScale().applyOptions({});
       legendApiRef.current?.setLatest(candles.at(-1) ?? null);
     }
   }, [bars]);
@@ -98,13 +106,19 @@ export function PublicChart({ slug, timeframe }: { slug: string; timeframe: stri
 
   return (
     <div className="relative">
+      {/* The <canvas> conveys nothing to a screen reader; name the region and expose the
+          crosshair legend as a live region so the OHLC values are readable at all. */}
       <div
         ref={containerRef}
+        role="img"
+        aria-label={`${timeframe} delayed candlestick chart for ${label ?? slug.toUpperCase()}`}
         className="h-[380px] w-full rounded-lg border border-border bg-card sm:h-[440px]"
       />
       <div
         ref={legendRef}
-        aria-hidden
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
         className="pointer-events-none absolute left-3 top-3 z-10 rounded-md border border-border/60 bg-background/70 px-2.5 py-1 font-mono text-xs tabular-nums text-foreground backdrop-blur empty:hidden"
       />
       {(isLoading || empty) && (

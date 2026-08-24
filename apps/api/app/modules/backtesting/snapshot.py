@@ -9,7 +9,8 @@ from datetime import datetime
 from typing import Any
 
 from app.core.logging import get_logger
-from app.modules.backtesting.types import BacktestResult
+from app.modules.backtesting.metrics import METRICS_VERSION, sample_size_notes
+from app.modules.backtesting.types import BacktestResult, ExecutionConfig
 
 logger = get_logger("backtesting")
 
@@ -17,7 +18,18 @@ _MAX_EQUITY_POINTS = 5000
 _MAX_TRADES = 500
 
 
-def result_to_dict(result: BacktestResult, *, as_of: datetime | None = None) -> dict[str, Any]:
+def result_to_dict(
+    result: BacktestResult,
+    *,
+    as_of: datetime | None = None,
+    config: ExecutionConfig | None = None,
+) -> dict[str, Any]:
+    """Serialize a result to a JSON-safe dict.
+
+    ``config`` is the ExecutionConfig the run used. Recording it is what makes
+    the "costs are modelled" claim checkable from the artifact itself rather
+    than from a hardcoded string in the UI.
+    """
     if len(result.equity_curve) > _MAX_EQUITY_POINTS:
         logger.info(
             "equity_curve_truncated", total=len(result.equity_curve), kept=_MAX_EQUITY_POINTS
@@ -32,6 +44,9 @@ def result_to_dict(result: BacktestResult, *, as_of: datetime | None = None) -> 
         "num_trades": len(result.trades),
         "total_commission": str(result.total_commission),
         "metrics": result.metrics,
+        "metrics_version": METRICS_VERSION,
+        "metrics_notes": sample_size_notes(result.metrics),
+        "execution": (config or ExecutionConfig()).as_dict(),
         "bars": result.bars,
         "spec_hash": result.spec_hash,
         "engine_version": result.engine_version,

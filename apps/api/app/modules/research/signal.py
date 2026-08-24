@@ -94,7 +94,7 @@ async def evaluate_signal(
         )
 
     df, arrays = compute.build_arrays(bars)
-    arrays.update(compute.compute_indicators(df, spec.indicators))
+    arrays.update(compute.compute_indicators(df, spec.indicators, calendar=instrument.calendar))
 
     last = len(bars) - 1
     should_enter = compute.evaluate(spec.entry_long, arrays, last)

@@ -52,6 +52,50 @@ function readCookie(name: string): string | null {
 }
 
 /**
+ * Endpoints where a 401 means "the credentials you just submitted are wrong", not
+ * "your session expired". The API raises the same AuthenticationError (401) for both
+ * cases, so without this list a failed sign-in or a mistyped current password would
+ * navigate the user away and swallow the message that explains what went wrong.
+ */
+const CREDENTIAL_PATHS = [
+  "/auth/login",
+  "/auth/register",
+  "/auth/logout",
+  "/auth/change-password",
+  "/auth/delete",
+  "/auth/password-reset",
+];
+
+let reauthPending = false;
+
+/**
+ * Single place where an expired session turns into a sign-in prompt.
+ *
+ * Without this every authed screen renders a 401 as its own "nothing here yet" empty
+ * state, so a logged-out user sees a fully-chromed app calmly reporting that the
+ * platform has no markets, no strategies and no data — an operational lie caused by a
+ * session problem.
+ *
+ * The `reauth` flag matters: the session cookie is HttpOnly, so the browser cannot
+ * drop it, and proxy.ts bounces /login back into the app on cookie PRESENCE alone. An
+ * expired-but-present cookie would therefore ping-pong forever; `reauth` tells the
+ * proxy to show the form. We use a full document navigation rather than the router so
+ * in-flight queries and the cached authed state are torn down with the page.
+ */
+function bounceToSignIn(path: string): void {
+  if (typeof window === "undefined") return;
+  if (reauthPending) return;
+  if (CREDENTIAL_PATHS.some((p) => path.startsWith(p))) return;
+  const { pathname, search } = window.location;
+  if (pathname === "/login" || pathname.startsWith("/login/")) return;
+  reauthPending = true;
+  const target = new URL("/login", window.location.origin);
+  target.searchParams.set("reauth", "1");
+  if (pathname !== "/") target.searchParams.set("next", pathname + search);
+  window.location.assign(target.toString());
+}
+
+/**
  * Base for the PUBLIC, unauthenticated endpoints (`/public/markets…`).
  *
  * These are called from server components (the SEO pages) as well as, potentially,
@@ -87,6 +131,7 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
     } catch {
       /* non-JSON error body */
     }
+    if (res.status === 401) bounceToSignIn(path);
     throw new ApiError(res.status, detail);
   }
   if (res.status === 204) return undefined as T;

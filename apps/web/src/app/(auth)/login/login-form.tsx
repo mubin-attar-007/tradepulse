@@ -18,6 +18,9 @@ function safeNext(next: string | null): string {
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  // Set by the API client after any 401 (lib/api/client.ts). Say why the user is here —
+  // silently showing the sign-in form reads like the app forgot them for no reason.
+  const expired = searchParams.get("reauth") !== null;
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,6 +50,14 @@ export function LoginForm() {
         <p className="mt-1 text-sm text-muted-foreground">
           {mode === "login" ? "Sign in to your account" : "Create your account"}
         </p>
+        {expired && mode === "login" ? (
+          <p
+            role="status"
+            className="mt-4 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
+          >
+            Your session has expired. Sign in again to pick up where you left off.
+          </p>
+        ) : null}
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div className="space-y-1">
             <label htmlFor="email" className="text-sm">

@@ -25,9 +25,13 @@ export function LivePrice({ instrumentId }: { instrumentId: string }) {
       <span className="tabular-nums">
         ${Number(data.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}
       </span>
+      {/* The client refetches every 30s but the SERVER's poll cadence varies by deployment
+          (the documented free-tier path is driven by an external ~5-minute cron), so the
+          tooltip states what we can actually observe — when this value last changed hands —
+          instead of asserting an interval we may not be meeting. */}
       <DataBadge
         kind="DELAYED"
-        title={`Polled every 30s and may be delayed. Last updated ${new Date(dataUpdatedAt).toLocaleTimeString()}.`}
+        title={`Delayed price, polled periodically. Fetched ${new Date(dataUpdatedAt).toLocaleTimeString()}.`}
       />
     </span>
   );

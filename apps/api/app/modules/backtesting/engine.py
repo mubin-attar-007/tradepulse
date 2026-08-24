@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import date, datetime
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from app.modules.backtesting import compute
 from app.modules.backtesting.metrics import compute_metrics
@@ -28,10 +29,19 @@ from app.modules.strategies.spec import ENGINE_VERSION, ExitRule, PositionSizing
 
 _D0 = Decimal("0")
 
+# Exchange calendar -> IANA zone. A 24/7 venue has no local session boundary.
+_CALENDAR_ZONES: dict[str, str] = {"XNYS": "America/New_York"}
+
 
 def _to_minutes(hhmm: str) -> int:
     hours, minutes = hhmm.split(":")
     return int(hours) * 60 + int(minutes)
+
+
+def _calendar_zone(calendar: str) -> ZoneInfo | None:
+    """IANA zone for an exchange calendar; None for a 24/7 venue."""
+    name = _CALENDAR_ZONES.get(calendar)
+    return ZoneInfo(name) if name else None
 
 
 def _size(
@@ -108,9 +118,18 @@ def run(
     config: ExecutionConfig,
     *,
     close_at_end: bool = True,
+    calendar: str = "24x7",
 ) -> BacktestResult:
+    """Replay ``bars`` under ``spec`` and return a reproducible result.
+
+    ``calendar`` ('XNYS' | '24x7') is the instrument's trading calendar. It decides
+    where a session begins for session-anchored indicators, how a ``time_of_day``
+    window expressed in EXCHANGE time is interpreted, and how per-bar returns are
+    annualized. Defaulting it to 24x7 for an equity annualizes an hourly Sharpe at
+    8,760 periods per year instead of ~1,638 — about 2.3x too large.
+    """
     df, arrays = compute.build_arrays(bars)
-    arrays.update(compute.compute_indicators(df, spec.indicators))
+    arrays.update(compute.compute_indicators(df, spec.indicators, calendar=calendar))
 
     slip = slippage_fraction(config)
     comm = _D0 if config.frictionless else Decimal(str(config.commission_bps)) / Decimal(10000)
@@ -121,6 +140,15 @@ def run(
         atr_arr = arrays.get(f"indicator:{spec.sizing.atr_ref}")
     tod_start = _to_minutes(spec.time_of_day.start) if spec.time_of_day else None
     tod_end = _to_minutes(spec.time_of_day.end) if spec.time_of_day else None
+    # A window declared in EXCHANGE time has to be compared in exchange time. Bars are
+    # stored in UTC, so 09:30-16:00 'exchange' on a US equity was previously matched
+    # against 09:30-16:00 UTC, i.e. 04:30-11:00 ET: most of the regular session
+    # excluded and the pre-market included.
+    tod_zone = (
+        _calendar_zone(calendar)
+        if spec.time_of_day is not None and spec.time_of_day.timezone == "exchange"
+        else None
+    )
 
     cash = config.initial_cash
     total_commission = _D0
@@ -152,11 +180,17 @@ def run(
     def close_position(exit_fill: Decimal, ts: datetime, idx: int, reason: str) -> None:
         nonlocal cash, total_commission, in_pos, qty, consecutive_losses, halted
         proceeds = qty * exit_fill
-        commission = proceeds * comm
-        cash += proceeds - commission
-        total_commission += commission
-        exit_net = proceeds - commission
+        exit_commission = proceeds * comm
+        cash += proceeds - exit_commission
+        total_commission += exit_commission
+        exit_net = proceeds - exit_commission
         pnl = exit_net - entry_gross
+        # Report the ROUND-TRIP commission on the trade. Recording only the exit leg
+        # (the previous behaviour) made Trade.commission silently half the true cost,
+        # so any consumer summing it — a report, an export, a metric — understated
+        # the frictions by a factor of two while the account balance was correct.
+        # The entry leg is recoverable exactly: entry_gross = notional + entry fee.
+        entry_commission = entry_gross - (qty * entry_price)
         trades.append(
             Trade(
                 entry_ts=entry_ts,
@@ -169,7 +203,7 @@ def run(
                 return_pct=float(pnl / entry_gross) if entry_gross > 0 else 0.0,
                 bars_held=idx - entry_i,
                 exit_reason=reason,
-                commission=commission,
+                commission=entry_commission + exit_commission,
             )
         )
         consecutive_losses = consecutive_losses + 1 if pnl < 0 else 0
@@ -203,7 +237,12 @@ def run(
             pending_entry = False
             equity = cash
             fill = entry_fill(o, slip)
-            atr_val = float(atr_arr[i]) if atr_arr is not None else None
+            # Read the DECISION bar (i-1), never the bar being filled on. Bar i's ATR
+            # embeds bar i's own high/low, which are not knowable when the order is
+            # sent: perturbing only bar i's high/low moved position size by ~18x and
+            # changed equity at bar i. The existing canary perturbs only bars AFTER
+            # the cut, so it could not detect this class of intrabar look-ahead.
+            atr_val = float(atr_arr[i - 1]) if atr_arr is not None and i > 0 else None
             size = _size(spec.sizing, equity, fill, exit_rule.stop_loss_pct, atr_val)
             max_notional = equity * Decimal(str(spec.risk.max_position_pct))
             if size * fill > max_notional and fill > 0:
@@ -226,19 +265,36 @@ def run(
                 entry_gross = notional + commission
                 entry_ts = bar.ts
                 entry_i = i
-                highest = h
+                # Arm the trail from the ENTRY PRICE, not this bar's high: the high may
+                # have printed before our fill at the open, so seeding from it ratchets
+                # the trail off a level we could never have traded at.
+                highest = fill
                 stop_price = stop_from_fill(fill, exit_rule)
                 target_price = target_from_fill(fill, exit_rule)
 
         # 3) intrabar bracket checks
         if in_pos:
+            # The level live AT THE OPEN is what decides whether this is a gap, so it
+            # must be captured BEFORE the trail ratchets on this bar's high. After a
+            # ratchet the open is mechanically below the new trail, so every trailing
+            # exit on a rallying bar was mis-classified as a gap and booked at the
+            # open: on a 102 -> high 130 -> low 101 bar with a 10% trail that reported
+            # an exit at 102 when the trail that actually fired was 117.
+            stop_at_open = stop_price
+            stop_reason = "stop"
             if exit_rule.trailing_stop_pct:
                 highest = max(highest, h)
                 trail = highest * (Decimal(1) - Decimal(str(exit_rule.trailing_stop_pct)))
-                stop_price = trail if stop_price is None else max(stop_price, trail)
+                if stop_price is None or trail >= stop_price:
+                    stop_price = trail
+                    stop_reason = "trailing"
             if stop_price is not None and low_ <= stop_price:
-                fill = o if o <= stop_price else stop_price  # gap-through fills at open
-                close_position(sell_fill(fill), bar.ts, i, "stop")
+                # A genuine gap-through (the market opened at or below the level that
+                # was ALREADY live) fills at the open; otherwise the level is touched
+                # intrabar and fills there.
+                gapped = stop_at_open is not None and o <= stop_at_open
+                fill = o if gapped else stop_price
+                close_position(sell_fill(fill), bar.ts, i, stop_reason)
             elif target_price is not None and h >= target_price:
                 fill = o if o >= target_price else target_price
                 close_position(sell_fill(fill), bar.ts, i, "target")
@@ -266,7 +322,8 @@ def run(
             if not in_pos and not halted and not day_halted:
                 in_window = True
                 if tod_start is not None and tod_end is not None:
-                    minute = bar.ts.hour * 60 + bar.ts.minute
+                    local = bar.ts.astimezone(tod_zone) if tod_zone is not None else bar.ts
+                    minute = local.hour * 60 + local.minute
                     in_window = tod_start <= minute < tod_end
                 if in_window and compute.evaluate(spec.entry_long, arrays, i):
                     pending_entry = True
@@ -294,7 +351,7 @@ def run(
             }
 
     final_equity = equity_curve[-1].equity if equity_curve else config.initial_cash
-    metrics = compute_metrics(equity_curve, trades, spec.timeframe)
+    metrics = compute_metrics(equity_curve, trades, spec.timeframe, calendar=calendar)
     return BacktestResult(
         initial_cash=config.initial_cash,
         final_equity=final_equity,

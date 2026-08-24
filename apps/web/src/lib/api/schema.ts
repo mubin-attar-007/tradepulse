@@ -4,6 +4,30 @@
  */
 
 export interface paths {
+    "/ai/clarify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Clarify
+         * @description What the platform understands from a request — with no model call.
+         *
+         *     Instant and free, so a user can see how their wording will be read before
+         *     spending a slow local generation on it. It is the same extraction the semantic
+         *     checker later holds the model to, which is why it is worth exposing.
+         */
+        post: operations["clarify_ai_clarify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/explain": {
         parameters: {
             query?: never;
@@ -13,8 +37,31 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Explain Backtest */
-        post: operations["explain_backtest_ai_explain_post"];
+        /**
+         * Explain Experiment
+         * @description Explain a stored experiment using only the numbers it actually contains.
+         */
+        post: operations["explain_experiment_ai_explain_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ai Status
+         * @description What the AI layer can do right now, and why a profile is unavailable.
+         */
+        get: operations["ai_status_ai_status_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -30,7 +77,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Generate Strategy */
+        /**
+         * Generate Strategy
+         * @description Natural language -> a validated StrategySpec, with the full trace.
+         */
         post: operations["generate_strategy_ai_strategy_post"];
         delete?: never;
         options?: never;
@@ -282,6 +332,40 @@ export interface paths {
          *     NOT an executable order — live trading is gated (POST /live/orders → 403).
          */
         post: operations["position_size_calc_position_size_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/experiments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Experiments */
+        get: operations["list_experiments_experiments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/experiments/{experiment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Experiment */
+        get: operations["get_experiment_experiments__experiment_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -646,6 +730,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/research/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute
+         * @description Run an approved plan and return the report.
+         *
+         *     The approval is re-derived from the submitted content, so it cannot be reused
+         *     for a different strategy, a different dataset, or a different plan.
+         */
+        post: operations["execute_research_execute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/research/propose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Propose
+         * @description Understand the request, propose a strategy, and plan an experiment.
+         *
+         *     Runs no experiment and saves no strategy. The response carries the plan, every
+         *     assumption applied, every disagreement between the request and the proposal, and
+         *     an approval token for exactly this proposal.
+         */
+        post: operations["propose_research_propose_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/robustness/suite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Robustness Suite
+         * @description Run walk-forward, cost stress, resampling and (optionally) a parameter sweep,
+         *     then return a stability verdict with the evidence behind every check.
+         */
+        post: operations["run_robustness_suite_robustness_suite_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/strategies": {
         parameters: {
             query?: never;
@@ -721,6 +873,25 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * AIStatusOut
+         * @description What the AI layer can actually do right now.
+         *
+         *     Exists because the baseline failure mode was invisible: an expired key produced
+         *     a 500 on every request with no way to see that the provider chain was empty.
+         */
+        AIStatusOut: {
+            /** Chain */
+            chain: string[];
+            /** Installed Local Models */
+            installed_local_models: string[];
+            /** Local Only */
+            local_only: boolean;
+            /** Notes */
+            notes: string[];
+            /** Profiles */
+            profiles: components["schemas"]["ProfileOut"][];
+        };
+        /**
          * AlertOut
          * @description One fired paper-trading alert (entry/exit fill or risk event).
          */
@@ -748,6 +919,42 @@ export interface components {
             session_id: string;
             /** Symbol */
             symbol: string;
+        };
+        /** AttemptOut */
+        AttemptOut: {
+            /** Error */
+            error: string;
+            /** Index */
+            index: number;
+            /** Latency Ms */
+            latency_ms: number;
+            /** Model */
+            model: string;
+            /** Profile */
+            profile: string;
+            /** Prompt */
+            prompt: string;
+            /** Provider */
+            provider: string;
+            /** Status */
+            status: string;
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+        };
+        /**
+         * AxisIn
+         * @description One swept parameter. ``path`` must address a whitelisted numeric leaf.
+         */
+        AxisIn: {
+            /**
+             * Path
+             * @description A sweepable parameter, e.g. 'indicators.<id>.params.period', 'exit.stop_loss_pct', 'sizing.value', 'risk.max_position_pct'.
+             */
+            path: string;
+            /** Values */
+            values: number[];
         };
         /** BacktestOut */
         BacktestOut: {
@@ -888,6 +1095,32 @@ export interface components {
             /** New Password */
             new_password: string;
         };
+        /** ClarifyRequest */
+        ClarifyRequest: {
+            /** Prompt */
+            prompt: string;
+        };
+        /**
+         * ClarifyResponse
+         * @description Deterministic pre-flight: what is unclear, unsupported, or already understood.
+         *
+         *     Runs with no model call at all, so it is instant and free, and it is the same
+         *     extraction the semantic checker later verifies the model against.
+         */
+        ClarifyResponse: {
+            /** Ambiguities */
+            ambiguities: string[];
+            /** Constraints */
+            constraints: {
+                [key: string]: string;
+            }[];
+            /** Understood */
+            understood: {
+                [key: string]: unknown;
+            };
+            /** Unsupported */
+            unsupported: string[];
+        };
         /** Comparison */
         Comparison: {
             left: components["schemas"]["Operand"];
@@ -934,6 +1167,27 @@ export interface components {
              */
             strategy_id: string;
         };
+        /**
+         * ExecuteRequest
+         * @description Everything needed to resume an approved run.
+         *
+         *     The client returns the proposal it was shown. Nothing is trusted: the token is
+         *     verified against hashes recomputed from these fields, so a client that edits the
+         *     spec or the plan before approving simply fails verification.
+         */
+        ExecuteRequest: {
+            /** Approval Token */
+            approval_token: string;
+            /** Data Fingerprint */
+            data_fingerprint: string;
+            /** Plan */
+            plan?: {
+                [key: string]: unknown;
+            };
+            /** Request */
+            request: string;
+            spec: components["schemas"]["StrategySpec-Input"];
+        };
         /** ExitRule */
         "ExitRule-Input": {
             /** Exit Conditions */
@@ -960,30 +1214,195 @@ export interface components {
             /** Trailing Stop Pct */
             trailing_stop_pct?: number | null;
         };
-        /** ExplainRequest */
-        ExplainRequest: {
-            /** Context */
-            context: {
+        /**
+         * ExperimentOut
+         * @description A persisted experiment, carrying its own provenance.
+         */
+        ExperimentOut: {
+            /** Bars */
+            bars: number | null;
+            /** Completed At */
+            completed_at: string | null;
+            /** Config */
+            config: {
                 [key: string]: unknown;
-            };
+            } | null;
+            /** Cost Model Version */
+            cost_model_version: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Data Fingerprint */
+            data_fingerprint: string;
+            /** End Ts */
+            end_ts: string | null;
+            /** Engine Version */
+            engine_version: string;
+            /** Error */
+            error: string | null;
+            /** Error Category */
+            error_category: string | null;
+            /** Hypothesis */
+            hypothesis: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Metrics Version */
+            metrics_version: string;
+            /** Notes */
+            notes: string | null;
+            /** Parent Id */
+            parent_id: string | null;
+            /** Result */
+            result: {
+                [key: string]: unknown;
+            } | null;
+            /** Seed */
+            seed: number | null;
+            /** Spec Hash */
+            spec_hash: string;
+            /** Start Ts */
+            start_ts: string | null;
+            /** Status */
+            status: string;
+            /** Strategy Id */
+            strategy_id: string | null;
+            /** Strategy Version */
+            strategy_version: number | null;
+            /** Symbol */
+            symbol: string | null;
+            /** Tags */
+            tags: string[] | null;
+            /** Timeframe */
+            timeframe: string | null;
+            /** Title */
+            title: string;
+        };
+        /** ExperimentSummaryOut */
+        ExperimentSummaryOut: {
+            /** Completed At */
+            completed_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Data Fingerprint */
+            data_fingerprint: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Spec Hash */
+            spec_hash: string;
+            /** Status */
+            status: string;
+            /** Symbol */
+            symbol: string | null;
+            /** Timeframe */
+            timeframe: string | null;
+            /** Title */
+            title: string;
+            /** Verdict */
+            verdict?: string | null;
+        };
+        /**
+         * ExplainRequest
+         * @description Narration is anchored to a PERSISTED experiment, never to client-supplied numbers.
+         *
+         *     The v1 endpoint accepted an arbitrary context dict from the request body, so any
+         *     caller could have the model narrate figures of their own invention while the
+         *     output was described as grounded.
+         */
+        ExplainRequest: {
+            /**
+             * Experiment Id
+             * Format: uuid
+             */
+            experiment_id: string;
         };
         /** ExplainResponse */
         ExplainResponse: {
+            grounding: components["schemas"]["GroundingOut"];
+            /** Latency Ms */
+            latency_ms: number;
+            /** Model */
+            model: string;
+            /** Profile */
+            profile: string;
+            /** Prompt */
+            prompt: string;
             /** Provider */
             provider: string;
+            /** Routing */
+            routing: components["schemas"]["RoutingStepOut"][];
             /** Text */
             text: string;
+            /** Tokens */
+            tokens: number;
         };
         /** GenerateStrategyRequest */
         GenerateStrategyRequest: {
+            /** Profile */
+            profile?: string | null;
             /** Prompt */
             prompt: string;
         };
         /** GenerateStrategyResponse */
         GenerateStrategyResponse: {
-            /** Provider */
-            provider: string;
-            spec: components["schemas"]["StrategySpec-Output"];
+            /** Ambiguities */
+            ambiguities: string[];
+            /** Applied Defaults */
+            applied_defaults: string[];
+            /** Attempts */
+            attempts: components["schemas"]["AttemptOut"][];
+            /** Deterministic Only */
+            deterministic_only: boolean;
+            /** Message */
+            message: string;
+            /** Repairs */
+            repairs: number;
+            /** Routing */
+            routing: components["schemas"]["RoutingStepOut"][];
+            /** Semantic Issues */
+            semantic_issues: components["schemas"]["SemanticIssueOut"][];
+            spec: components["schemas"]["StrategySpec-Output"] | null;
+            /** Spec Hash */
+            spec_hash: string | null;
+            /** Status */
+            status: string;
+            /** Total Latency Ms */
+            total_latency_ms: number;
+            /** Total Tokens */
+            total_tokens: number;
+            /** Unsupported */
+            unsupported: string[];
+        };
+        /** GroundingOut */
+        GroundingOut: {
+            /** Causal Claims */
+            causal_claims: string[];
+            /** Has Disclosure */
+            has_disclosure: boolean;
+            /** Method */
+            method: string;
+            /** Ok */
+            ok: boolean;
+            /** Predictive Claims */
+            predictive_claims: string[];
+            /** Supported Numbers */
+            supported_numbers: string[];
+            /** Unsupported Numbers */
+            unsupported_numbers: string[];
         };
         /** Group */
         "Group-Input": {
@@ -1043,7 +1462,10 @@ export interface components {
             /** Values */
             values: (number | null)[];
         };
-        /** IndicatorSpec */
+        /**
+         * IndicatorSpec
+         * @description One catalog entry instantiated with concrete parameters.
+         */
         IndicatorSpec: {
             /** Id */
             id: string;
@@ -1241,6 +1663,32 @@ export interface components {
             /** Value */
             value: number;
         };
+        /** ProfileOut */
+        ProfileOut: {
+            /** Capabilities */
+            capabilities: string[];
+            /** Circuit State */
+            circuit_state: string;
+            /** Configured */
+            configured: boolean;
+            /** Context Tokens */
+            context_tokens: number;
+            /** Description */
+            description: string;
+            /** Local */
+            local: boolean;
+            /** Model */
+            model: string;
+            /** Name */
+            name: string;
+            /** Provider */
+            provider: string;
+        };
+        /** ProposeRequest */
+        ProposeRequest: {
+            /** Request */
+            request: string;
+        };
         /**
          * PublicChartBar
          * @description OHLCV bar timestamp + values (timestamps parallel the indicator series).
@@ -1339,7 +1787,7 @@ export interface components {
             engine_version: string;
             /** Metrics */
             metrics: {
-                [key: string]: number;
+                [key: string]: number | null;
             };
             /** Note */
             note: string;
@@ -1365,7 +1813,7 @@ export interface components {
             end: string | null;
             /** Metrics */
             metrics: {
-                [key: string]: number;
+                [key: string]: number | null;
             };
             /** Start */
             start: string | null;
@@ -1395,7 +1843,7 @@ export interface components {
             engine_version: string;
             /** Metrics */
             metrics: {
-                [key: string]: number;
+                [key: string]: number | null;
             };
             /** Note */
             note: string;
@@ -1452,6 +1900,84 @@ export interface components {
              * @default 1
              */
             max_position_pct: number;
+        };
+        /** RobustnessSuiteRequest */
+        RobustnessSuiteRequest: {
+            /**
+             * Anchored
+             * @default true
+             */
+            anchored: boolean;
+            /** Axes */
+            axes?: components["schemas"]["AxisIn"][];
+            /** Cost Multiples */
+            cost_multiples?: number[];
+            /**
+             * Embargo Bars
+             * @default 0
+             */
+            embargo_bars: number;
+            /**
+             * End
+             * Format: date-time
+             */
+            end: string;
+            /**
+             * Folds
+             * @default 4
+             */
+            folds: number;
+            /** Hypothesis */
+            hypothesis?: string | null;
+            /**
+             * Monte Carlo Samples
+             * @default 1000
+             */
+            monte_carlo_samples: number;
+            /**
+             * Seed
+             * @default 7
+             */
+            seed: number;
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+            /**
+             * Strategy Id
+             * Format: uuid
+             */
+            strategy_id: string;
+        };
+        /** RoutingStepOut */
+        RoutingStepOut: {
+            /** Outcome */
+            outcome: string;
+            /** Profile */
+            profile: string;
+            /** Provider */
+            provider: string;
+            /** Reason */
+            reason: string;
+        };
+        /**
+         * SemanticIssueOut
+         * @description A place the generated strategy departs from the request.
+         *
+         *     Surfaced rather than auto-corrected: the user decides whether the model or their
+         *     own wording was wrong, and a checker that silently rewrites output hides exactly
+         *     the failure it exists to expose.
+         */
+        SemanticIssueOut: {
+            /** Evidence */
+            evidence: string;
+            /** Expected */
+            expected: string;
+            /** Kind */
+            kind: string;
+            /** Problem */
+            problem: string;
         };
         /**
          * SignalOut
@@ -1660,7 +2186,40 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    explain_backtest_ai_explain_post: {
+    clarify_ai_clarify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClarifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClarifyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    explain_experiment_ai_explain_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1689,6 +2248,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ai_status_ai_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIStatusOut"];
                 };
             };
         };
@@ -2173,6 +2752,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PositionSizeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_experiments_experiments_get: {
+        parameters: {
+            query?: {
+                kind?: string | null;
+                strategy_id?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentSummaryOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_experiment_experiments__experiment_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentOut"];
                 };
             };
             /** @description Validation Error */
@@ -2721,6 +3364,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    execute_research_execute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    propose_research_propose_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProposeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_robustness_suite_robustness_suite_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RobustnessSuiteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

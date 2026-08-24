@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 
+import { QueryError } from "@/components/query-error";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiError } from "@/lib/api/client";
@@ -33,7 +34,13 @@ const EXAMPLE = JSON.stringify(
 );
 
 export function StrategiesView() {
-  const { data: strategies, refetch } = useQuery({
+  const {
+    data: strategies,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["strategies"],
     queryFn: () => api.strategies(),
   });
@@ -49,7 +56,10 @@ export function StrategiesView() {
     try {
       const resp = await api.aiStrategy(prompt);
       setJson(JSON.stringify(resp.spec, null, 2));
-      toast({ description: `Generated via ${resp.provider} — review and create.`, variant: "success" });
+      toast({
+        description: `Drafted via ${resp.provider} — review the spec, then create it.`,
+        variant: "success",
+      });
     } catch (err) {
       toast({
         description: err instanceof ApiError ? err.message : "AI unavailable.",
@@ -93,14 +103,21 @@ export function StrategiesView() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Strategies</h1>
+      <div>
+        <h1 className="text-2xl font-semibold">Strategies</h1>
+        <p className="text-sm text-muted-foreground">
+          One canonical JSON spec per strategy — indicators, entry/exit rules, sizing and risk
+          limits. Write it by hand or have the copilot draft it; either way the server validates it
+          before anything runs, and nothing is ever executed automatically.
+        </p>
+      </div>
 
       <div className="space-y-3 rounded-lg border border-border bg-card p-4">
         <div className="flex gap-2">
           <input
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe a strategy in plain English (AI fills the spec below)…"
+            placeholder="Describe a strategy in plain English — the copilot drafts the spec below for you to review…"
             className="h-9 flex-1 rounded-md border border-input bg-transparent px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
           />
           <Button variant="outline" size="sm" onClick={generate} disabled={busy}>
@@ -121,47 +138,63 @@ export function StrategiesView() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
-          <thead className="bg-card text-left text-muted-foreground">
-            <tr>
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-              <th className="px-4 py-2 font-medium">Version</th>
-              <th className="px-4 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {!strategies?.length ? (
+      {/* A list that failed to load is not an empty list — never report the second when
+          the first happened (the user's saved work is not gone, we just could not ask). */}
+      {isError ? (
+        <QueryError
+          title="Couldn't load your strategies"
+          error={error}
+          onRetry={() => void refetch()}
+        />
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-card text-left text-muted-foreground">
               <tr>
-                <td className="px-4 py-3 text-muted-foreground" colSpan={4}>
-                  No strategies yet — create one above.
-                </td>
+                <th className="px-4 py-2 font-medium">Name</th>
+                <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-4 py-2 font-medium">Version</th>
+                <th className="px-4 py-2" />
               </tr>
-            ) : (
-              strategies.map((s) => (
-                <tr key={s.id} className="border-t border-border">
-                  <td className="px-4 py-2 font-medium">{s.name}</td>
-                  <td className="px-4 py-2 text-muted-foreground">{s.status}</td>
-                  <td className="px-4 py-2 tabular-nums">{s.latest_version}</td>
-                  <td className="px-4 py-2 text-right">
-                    <Link className="mr-4 text-primary hover:underline" href="/backtests">
-                      Backtest
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => deploy(s.id)}
-                      className="text-primary hover:underline"
-                    >
-                      Deploy to paper
-                    </button>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td className="px-4 py-3 text-muted-foreground" colSpan={4}>
+                    Loading…
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : !strategies?.length ? (
+                <tr>
+                  <td className="px-4 py-3 text-muted-foreground" colSpan={4}>
+                    No strategies yet — create one above.
+                  </td>
+                </tr>
+              ) : (
+                strategies.map((s) => (
+                  <tr key={s.id} className="border-t border-border">
+                    <td className="px-4 py-2 font-medium">{s.name}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{s.status}</td>
+                    <td className="px-4 py-2 tabular-nums">{s.latest_version}</td>
+                    <td className="px-4 py-2 text-right">
+                      <Link className="mr-4 text-primary hover:underline" href="/backtests">
+                        Backtest
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => deploy(s.id)}
+                        className="text-primary hover:underline"
+                      >
+                        Deploy to paper
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

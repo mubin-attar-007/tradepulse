@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -21,6 +21,17 @@ function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: 
   );
 }
 
+/**
+ * A count tile that tells the truth about all three states. `data?.length ?? "—"` cannot:
+ * it renders the same dash while loading and while failing, and `n ?? "—"` on a number
+ * that is never nullish renders 0 during load — a confident, wrong zero.
+ */
+function count<T>(query: UseQueryResult<T[]>): { value: ReactNode; hint?: string } {
+  if (query.isLoading) return { value: "…" };
+  if (query.isError) return { value: "—", hint: "couldn't load" };
+  return { value: query.data?.length ?? 0 };
+}
+
 export function DashboardView() {
   const me = useQuery({ queryKey: ["me"], queryFn: api.me });
   const strategies = useQuery({ queryKey: ["strategies"], queryFn: () => api.strategies() });
@@ -28,18 +39,25 @@ export function DashboardView() {
   const paper = useQuery({ queryKey: ["paper-sessions"], queryFn: () => api.paperSessions() });
   const instruments = useQuery({ queryKey: ["instruments"], queryFn: () => api.instruments() });
 
-  const runningSessions = paper.data?.filter((s) => s.status === "running") ?? [];
-  const running = runningSessions.length;
+  const runningCount = paper.data?.filter((s) => s.status === "running").length ?? 0;
 
-  // Display-only aggregate of paper equity across active sessions (latest snapshot,
-  // or starting cash before the first run). Money math that matters stays server-side.
-  const portfolioValue = runningSessions.reduce((sum, s) => {
-    const eq = (s.snapshot as { final_equity?: string } | null)?.final_equity;
-    return sum + (eq ? Number(eq) : Number(s.initial_cash));
-  }, 0);
-  const portfolioLabel = paper.isLoading
-    ? "…"
-    : `$${portfolioValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  /*
+   * There is deliberately NO aggregate "Portfolio Value" tile here.
+   *
+   * The previous version summed `Number(final_equity)` across running sessions in the
+   * browser. That broke the platform's core invariant — money is Decimal server-side and
+   * crosses the wire as a string, never arithmetic'd on the client — and the sum was not
+   * even a coherent quantity: it mixed post-run equity with pre-run starting cash for
+   * sessions that had never executed, and filtered to `running`, so stopping a session
+   * made the headline number drop to zero as if capital had evaporated.
+   *
+   * No endpoint returns an owner-level portfolio aggregate today, so rather than invent
+   * one in floating point we show counts here and let /paper display each session's own
+   * server-computed equity string. Restore a tile here only behind a real API aggregate.
+   */
+  const strategyStat = count(strategies);
+  const backtestStat = count(backtests);
+  const instrumentStat = count(instruments);
 
   return (
     <div className="space-y-6">
@@ -47,18 +65,24 @@ export function DashboardView() {
         <h1 className="text-2xl font-semibold tracking-tight">
           Welcome back{me.data?.display_name ? `, ${me.data.display_name}` : ""}
         </h1>
-        <p className="text-sm text-muted-foreground">Your market intelligence at a glance.</p>
+        <p className="text-sm text-muted-foreground">
+          Your research workspace at a glance. Prices are delayed; paper balances are simulated.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Stat label="Strategies" value={strategyStat.value} hint={strategyStat.hint ?? "canonical specs"} />
+        <Stat label="Simulations" value={backtestStat.value} hint={backtestStat.hint ?? "backtest runs stored"} />
         <Stat
-          label="Portfolio Value"
-          value={portfolioLabel}
-          hint={running ? `paper · ${running} active` : "deploy a strategy to begin"}
+          label="Paper sessions"
+          value={paper.isLoading ? "…" : paper.isError ? "—" : runningCount}
+          hint={paper.isError ? "couldn't load" : "running now · simulated"}
         />
-        <Stat label="Strategies" value={strategies.data?.length ?? "—"} hint="canonical specs" />
-        <Stat label="Backtests" value={backtests.data?.length ?? "—"} hint="runs stored" />
-        <Stat label="Paper sessions" value={running ?? "—"} hint="running now" />
+        <Stat
+          label="Instruments"
+          value={instrumentStat.value}
+          hint={instrumentStat.hint ?? "tracked in your universe"}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -72,6 +96,10 @@ export function DashboardView() {
           <CardContent className="pt-3">
             {instruments.isLoading ? (
               <Skeleton className="h-40 w-full" />
+            ) : instruments.isError ? (
+              <p className="py-3 text-sm text-loss">
+                Couldn&apos;t load instruments. This is a connection problem, not an empty universe.
+              </p>
             ) : (
               <div className="divide-y divide-border">
                 {(instruments.data ?? []).slice(0, 6).map((i) => (
@@ -101,16 +129,19 @@ export function DashboardView() {
 
         <Card>
           <CardHeader>
-            <CardTitle>AI Insights</CardTitle>
+            {/* Named for what it is: a link to the copilot. A card titled "AI Insights" that
+                never produces one is vaporware in the middle of the app. */}
+            <CardTitle>AI copilot</CardTitle>
             <Sparkles size={15} className="text-primary" />
           </CardHeader>
           <CardContent className="space-y-3 pt-3 text-sm text-muted-foreground">
             <p>
-              Ask the assistant to draft a strategy, explain a backtest, or summarize a market —
-              grounded in your data, never financial advice.
+              Describe a strategy and the copilot drafts a canonical spec for you to review, or ask
+              it to narrate a finished simulation. It proposes and explains — it never places an
+              order, and it is not financial advice.
             </p>
             <Link href="/strategies" className="inline-block text-xs text-primary hover:underline">
-              Generate a strategy with AI →
+              Draft a strategy with AI →
             </Link>
           </CardContent>
         </Card>

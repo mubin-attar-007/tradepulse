@@ -3,7 +3,8 @@ TimescaleDB hypertable.
 
 Market data is global (shared, not owner-scoped). The OHLCV table stores ONLY
 1-minute, fully-closed (`is_final`) bars timestamped at bar OPEN (half-open
-``[ts, ts+1m)``); higher timeframes are derived on the fly via ``time_bucket``.
+``[ts, ts+1m)``); higher timeframes are derived on the fly with portable ``date_bin`` SQL, so the
+store runs on plain PostgreSQL as well as TimescaleDB.
 The hypertable itself is created in the migration (a TimescaleDB operation).
 """
 

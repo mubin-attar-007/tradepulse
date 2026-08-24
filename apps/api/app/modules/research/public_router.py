@@ -19,9 +19,10 @@ from fastapi import APIRouter, Query
 
 from app.core.deps import SessionDep
 from app.core.errors import BadRequestError, NotFoundError
-from app.modules.market_data import reference_backtest, service
 from app.modules.market_data import repository as repo
-from app.modules.market_data.schemas import (
+from app.modules.market_data import service
+from app.modules.research import reference_backtest
+from app.modules.research.schemas import (
     PublicChartBar,
     PublicIndicatorSeries,
     PublicInstrumentSummary,
@@ -46,7 +47,7 @@ track_record_router = APIRouter(prefix="/public", tags=["public-markets"])
 _ANNUALIZED_METRICS = frozenset({"cagr", "sharpe", "sortino"})
 
 
-def _public_metrics(metrics: dict[str, float]) -> dict[str, float]:
+def _public_metrics(metrics: dict[str, float | None]) -> dict[str, float | None]:
     """Drop annualized metrics that mislead over short/limited samples (B4)."""
     return {k: v for k, v in metrics.items() if k not in _ANNUALIZED_METRICS}
 
@@ -84,6 +85,7 @@ async def get_public_track_record(session: SessionDep) -> PublicTrackRecordOut:
         note=tr.note,
         data_note=tr.data_note,
     )
+
 
 _TIMEFRAMES = {"1m", "5m", "15m", "1h", "4h", "1d"}
 # Bars pulled to compute the on-page indicator series. Enough to warm up a 20-period

@@ -9,11 +9,16 @@ import { symbolToSlug } from "@/lib/markets/slug";
 // list is fetched from the public API — if the backend is unreachable at build
 // time we degrade to the static surfaces rather than fail the build.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // Sitemap entries are absolute by specification, so an unconfigured origin leaves
+  // nothing truthful to emit. Ship an empty sitemap (robots.txt disallows everything
+  // in that state anyway) rather than a full index of a domain we do not serve.
+  if (!SITE_URL) return [];
+
   const lastModified = new Date();
 
   let tickerEntries: MetadataRoute.Sitemap = [];
   try {
-    const instruments = await api.publicMarkets({ cache: "no-store" });
+    const instruments = await api.publicMarkets({ next: { revalidate: 3600 } });
     tickerEntries = instruments.map((i) => ({
       url: `${SITE_URL}/markets/${symbolToSlug(i.ticker)}`,
       lastModified,

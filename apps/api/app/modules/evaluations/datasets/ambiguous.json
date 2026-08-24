@@ -1,0 +1,305 @@
+{
+  "version": "1.0.0",
+  "cases": [
+    {
+      "id": "ambiguous-horizon-001",
+      "category": "ambiguous",
+      "request": "Build me a short-term momentum strategy on BTC/USD.",
+      "tags": ["horizon", "timeframe"],
+      "notes": "'Short-term' is a horizon, not a timeframe. It could mean 1m or 1d depending on who is asking, and silently picking one hands the user a strategy they did not author. status is not asserted because the platform may still produce a draft alongside the question.",
+      "expect": {
+        "ambiguity_contains": ["short/long-term"]
+      }
+    },
+    {
+      "id": "ambiguous-horizon-002",
+      "category": "ambiguous",
+      "request": "I want a long-term trend following system for AAPL using moving averages.",
+      "tags": ["horizon", "timeframe"],
+      "notes": "The opposite end of the same problem: 'long-term' plus unspecified moving-average periods. Even a reasonable-sounding 50/200 daily default is a guess the user never made.",
+      "expect": {
+        "ambiguity_contains": ["short/long-term"]
+      }
+    },
+    {
+      "id": "ambiguous-horizon-003",
+      "category": "ambiguous",
+      "request": "Give me a medium-term SPY strategy with a 3% stop.",
+      "tags": ["horizon", "timeframe"],
+      "notes": "The stop is concrete, so one part of the request is perfectly clear. A partially clear request must still raise the horizon question rather than being waved through because most of it parsed.",
+      "expect": {
+        "ambiguity_contains": ["short/long-term"]
+      }
+    },
+    {
+      "id": "ambiguous-horizon-004",
+      "category": "ambiguous",
+      "request": "Short-term mean reversion on ETH/USD with RSI.",
+      "tags": ["horizon", "timeframe", "terse"],
+      "notes": "Terse and jargon-dense. The indicator is named but neither its period nor the timeframe is, and 'short-term' is the only horizon signal - which is not one.",
+      "expect": {
+        "ambiguity_contains": ["short/long-term"]
+      }
+    },
+    {
+      "id": "ambiguous-volume-001",
+      "category": "ambiguous",
+      "request": "Buy AAPL when there is high volume and the 20 EMA crosses above the 50 EMA.",
+      "tags": ["volume", "threshold"],
+      "notes": "The crossover half is fully specified; the volume half is not. 'High volume' has no threshold, and the choice between 1.2x and 3x the average changes the trade count by an order of magnitude. Compare valid-volume-001, which states the multiple and must NOT raise this question.",
+      "expect": {
+        "ambiguity_contains": ["high volume"]
+      }
+    },
+    {
+      "id": "ambiguous-volume-002",
+      "category": "ambiguous",
+      "request": "Enter MSFT on heavy volume breakouts above the 50 SMA.",
+      "tags": ["volume", "threshold"],
+      "notes": "'Heavy volume' is the same gap in different words. Synonyms of the vague term must be caught too, or the clarification is trivially avoidable by rephrasing.",
+      "expect": {
+        "ambiguity_contains": ["high volume"]
+      }
+    },
+    {
+      "id": "ambiguous-volume-003",
+      "category": "ambiguous",
+      "request": "Go long SPY when unusual volume shows up on the 15m chart.",
+      "tags": ["volume", "threshold"],
+      "notes": "'Unusual' implies a statistical comparison the request never defines: unusual against what window, and by how much. The timeframe is clear, which makes it tempting to treat the rest as clear too.",
+      "expect": {
+        "ambiguity_contains": ["high volume"]
+      }
+    },
+    {
+      "id": "ambiguous-volume-004",
+      "category": "ambiguous",
+      "request": "BTC/USD 1h: buy the 9/21 EMA cross but only on high volume bars.",
+      "tags": ["volume", "threshold", "terse"],
+      "notes": "Symbol, timeframe and periods are all explicit, so this is a request that is 90% clear. The remaining 10% is a filter that decides whether the strategy trades at all.",
+      "expect": {
+        "ambiguity_contains": ["high volume"]
+      }
+    },
+    {
+      "id": "ambiguous-risk-001",
+      "category": "ambiguous",
+      "request": "Set me up with a low risk strategy on SPY.",
+      "tags": ["risk", "undefined-limits"],
+      "notes": "'Low risk' names an outcome without any of the limits that would produce it - stop distance, position cap, drawdown budget. Guessing here is worse than guessing an indicator period, because the user will believe a risk claim the platform never verified.",
+      "expect": {
+        "ambiguity_contains": ["low risk"]
+      }
+    },
+    {
+      "id": "ambiguous-risk-002",
+      "category": "ambiguous",
+      "request": "I want a safe way to trade AAPL daily.",
+      "tags": ["risk", "undefined-limits"],
+      "notes": "'Safe' is the same claim with a stronger word. The timeframe is clear; the risk profile is entirely undefined, and no backtest can be run against the word 'safe'.",
+      "expect": {
+        "ambiguity_contains": ["low risk"]
+      }
+    },
+    {
+      "id": "ambiguous-risk-003",
+      "category": "ambiguous",
+      "request": "Design a conservative BTC/USD swing strategy.",
+      "tags": ["risk", "undefined-limits"],
+      "notes": "'Conservative' on a 24/7 crypto instrument means something very different from 'conservative' on an index. The word carries an implied risk budget that only the user can supply.",
+      "expect": {
+        "ambiguity_contains": ["low risk"]
+      }
+    },
+    {
+      "id": "ambiguous-risk-004",
+      "category": "ambiguous",
+      "request": "Give me something conservative on MSFT with an EMA cross.",
+      "tags": ["risk", "undefined-limits"],
+      "notes": "Names the indicator family but neither its periods nor the risk limits the adjective implies. Two separate gaps; the risk one is the dangerous one.",
+      "expect": {
+        "ambiguity_contains": ["low risk"]
+      }
+    },
+    {
+      "id": "ambiguous-momentum-001",
+      "category": "ambiguous",
+      "request": "Buy BTC/USD when it has strong momentum on the 4h chart.",
+      "tags": ["momentum", "threshold"],
+      "notes": "'Strong momentum' names no indicator and no threshold. RSI above 60, MACD above signal and a 20/50 cross are all defensible readings that produce different strategies.",
+      "expect": {
+        "ambiguity_contains": ["strong momentum"]
+      }
+    },
+    {
+      "id": "ambiguous-momentum-002",
+      "category": "ambiguous",
+      "request": "Enter AAPL when the stock is trending up.",
+      "tags": ["momentum", "threshold"],
+      "notes": "'Trending up' is a visual judgement, not a rule over closed bars. Converting it into a specific moving-average relationship without asking invents the strategy's core condition.",
+      "expect": {
+        "ambiguity_contains": ["strong momentum"]
+      }
+    },
+    {
+      "id": "ambiguous-momentum-003",
+      "category": "ambiguous",
+      "request": "Go long SPY whenever there is a strong trend on the daily chart.",
+      "tags": ["momentum", "threshold"],
+      "notes": "The timeframe is explicit, which is exactly what makes this tempting to answer. Trend strength still needs a named measure and a number before anything can be simulated.",
+      "expect": {
+        "ambiguity_contains": ["strong momentum"]
+      }
+    },
+    {
+      "id": "ambiguous-stop-001",
+      "category": "ambiguous",
+      "request": "Buy ETH/USD when the 10 EMA crosses above the 30 EMA with a tight stop.",
+      "tags": ["stop", "threshold"],
+      "notes": "Entry is fully specified; the stop is an adjective. 'Tight' on 4h crypto might be 1% or 0.2%, and the difference decides whether the strategy is stopped out constantly.",
+      "expect": {
+        "ambiguity_contains": ["tight stop"]
+      }
+    },
+    {
+      "id": "ambiguous-stop-002",
+      "category": "ambiguous",
+      "request": "SPY 5m scalp on the VWAP cross with a really tight stop.",
+      "tags": ["stop", "threshold", "intraday"],
+      "notes": "An intensifier ('really') adds emphasis but no number. Emphasis must not be mistaken for specification.",
+      "expect": {
+        "ambiguity_contains": ["tight stop"]
+      }
+    },
+    {
+      "id": "ambiguous-stop-003",
+      "category": "ambiguous",
+      "request": "AAPL 15m: enter on the 9/20 EMA cross and use a close stop.",
+      "tags": ["stop", "threshold"],
+      "notes": "'Close stop' is the same gap phrased as a synonym, and it collides with 'close' the price field - which is why it is worth its own case rather than trusting one keyword.",
+      "expect": {
+        "ambiguity_contains": ["tight stop"]
+      }
+    },
+    {
+      "id": "ambiguous-period-001",
+      "category": "ambiguous",
+      "request": "Backtest my EMA cross idea on BTC/USD over the recent period.",
+      "tags": ["date-range", "history"],
+      "notes": "'Recent' is a date range with no dates. A backtest window silently chosen by the platform is the single most effective way to produce a flattering result nobody asked for.",
+      "expect": {
+        "ambiguity_contains": ["recent"]
+      }
+    },
+    {
+      "id": "ambiguous-period-002",
+      "category": "ambiguous",
+      "request": "Show me how AAPL has done lately with a 50/200 SMA cross.",
+      "tags": ["date-range", "history"],
+      "notes": "The periods are explicit and the instrument is clear, so only the window is missing - and the window is what the answer's numbers depend on most.",
+      "expect": {
+        "ambiguity_contains": ["recent"]
+      }
+    },
+    {
+      "id": "ambiguous-period-003",
+      "category": "ambiguous",
+      "request": "Buy MSFT if it is currently above its 200-day moving average.",
+      "tags": ["date-range", "point-in-time"],
+      "notes": "'Currently' asks about a moment rather than a rule over history. A strategy is a rule evaluated on every closed bar, so this needs restating before it can be simulated.",
+      "expect": {
+        "ambiguity_contains": ["recent"]
+      }
+    },
+    {
+      "id": "ambiguous-benchmark-001",
+      "category": "ambiguous",
+      "request": "Build a strategy on SPY that will beat the market.",
+      "tags": ["benchmark", "objective"],
+      "notes": "'The market' is not a named series and 'beats' has no period. Without both, the claim is unfalsifiable - which is precisely the kind of claim the platform must not make on the user's behalf.",
+      "expect": {
+        "ambiguity_contains": ["benchmark"]
+      }
+    },
+    {
+      "id": "ambiguous-benchmark-002",
+      "category": "ambiguous",
+      "request": "I want something on AAPL that will outperform.",
+      "tags": ["benchmark", "objective"],
+      "notes": "'Outperform' with no comparator at all. The missing half is the benchmark, and inventing one (SPY? cash? buy-and-hold AAPL?) changes the verdict entirely.",
+      "expect": {
+        "ambiguity_contains": ["benchmark"]
+      }
+    },
+    {
+      "id": "ambiguous-benchmark-003",
+      "category": "ambiguous",
+      "request": "Design an ETH/USD system that should outperform buy and hold.",
+      "tags": ["benchmark", "objective"],
+      "notes": "Here the comparator IS named, but the period is not, and 'outperform' over which window is the whole question. This is the near-miss version of the benchmark gap.",
+      "expect": {
+        "ambiguity_contains": ["benchmark"]
+      }
+    },
+    {
+      "id": "ambiguous-universe-001",
+      "category": "ambiguous",
+      "request": "Trade large-cap stocks with a 20/50 EMA cross.",
+      "tags": ["universe", "instrument"],
+      "notes": "A universe rule, not an instrument. The engine backtests one instrument at a time, so this needs the user to name one rather than the platform choosing a representative.",
+      "expect": {
+        "ambiguity_contains": ["universe rule"]
+      }
+    },
+    {
+      "id": "ambiguous-universe-002",
+      "category": "ambiguous",
+      "request": "Give me a blue-chip rotation strategy on the daily chart.",
+      "tags": ["universe", "instrument"],
+      "notes": "'Blue-chip rotation' implies both a universe and cross-sectional ranking. The timeframe is clear; what is missing is the one thing the engine requires.",
+      "expect": {
+        "ambiguity_contains": ["universe rule"]
+      }
+    },
+    {
+      "id": "ambiguous-universe-003",
+      "category": "ambiguous",
+      "request": "Find penny stocks with a volume spike.",
+      "tags": ["universe", "instrument", "screener"],
+      "notes": "This is a screener request rather than a strategy request. Two gaps at once - no instrument and no volume threshold - and the universe one is the blocking gap.",
+      "expect": {
+        "ambiguity_contains": ["universe rule"]
+      }
+    },
+    {
+      "id": "ambiguous-outcome-001",
+      "category": "ambiguous",
+      "request": "What is the best strategy for BTC/USD?",
+      "tags": ["outcome", "objective"],
+      "notes": "'Best' presumes an objective function the user has not stated. The platform tests rules the user supplies; it does not rank strategies it invented against a criterion it also invented.",
+      "expect": {
+        "ambiguity_contains": ["'profitable' is an outcome"]
+      }
+    },
+    {
+      "id": "ambiguous-outcome-002",
+      "category": "ambiguous",
+      "request": "Give me a profitable EMA crossover on AAPL.",
+      "tags": ["outcome", "objective"],
+      "notes": "'Profitable' is a result, not a rule. Answering it as though it were a specification is how a research tool turns into a promise, which is the failure this whole category exists to prevent.",
+      "expect": {
+        "ambiguity_contains": ["'profitable' is an outcome"]
+      }
+    },
+    {
+      "id": "ambiguous-outcome-003",
+      "category": "ambiguous",
+      "request": "Build me something that makes money on SPY.",
+      "tags": ["outcome", "objective"],
+      "notes": "The bluntest form of the outcome request. It contains no rule at all, so there is nothing to compile even before the promise problem is considered.",
+      "expect": {
+        "ambiguity_contains": ["'profitable' is an outcome"]
+      }
+    }
+  ]
+}

@@ -12,19 +12,25 @@ const TITLE = `${BRAND_NAME} — ${BRAND_TAGLINE}`;
 
 export const metadata: Metadata = {
   // Resolves relative URLs (canonical, OG/Twitter images from opengraph-image.tsx).
-  metadataBase: new URL(SITE_URL),
+  // With no configured origin we fall back to localhost — an unmistakable "this build
+  // was not told where it lives" rather than a plausible-looking wrong domain — and
+  // pair it with noindex below so nothing acts on it. See lib/brand.ts.
+  metadataBase: new URL(SITE_URL ?? "http://localhost:3000"),
   title: {
     default: TITLE,
     template: `%s · ${BRAND_NAME}`,
   },
   description: BRAND_DESCRIPTION,
   applicationName: BRAND_NAME,
+  // Inherited by every route unless a page overrides it: an origin-less build must not
+  // invite indexing of URLs it cannot name correctly.
+  robots: SITE_URL ? undefined : { index: false, follow: false },
   openGraph: {
     type: "website",
     siteName: BRAND_NAME,
     title: TITLE,
     description: BRAND_DESCRIPTION,
-    url: SITE_URL,
+    ...(SITE_URL ? { url: SITE_URL } : {}),
     // opengraph-image.tsx supplies the og:image tags automatically.
   },
   twitter: {

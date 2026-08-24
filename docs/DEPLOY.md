@@ -57,11 +57,50 @@ cp infra/.env.prod.example infra/.env.prod
 # Fill in: DOMAIN, APP_SECRET_KEY, BROKER_CRED_KEY, POSTGRES_PASSWORD,
 # DATABASE_URL (use that password), CORS_ALLOW_ORIGINS=https://DOMAIN, GEMINI_API_KEY.
 ```
-Generate secrets:
+Generate secrets — **run these yourself, every time**. A key copied from a document,
+a chat log or another deployment protects nothing: everyone holding it can decrypt
+everything it encrypted.
 ```bash
 python -c "import secrets;print(secrets.token_urlsafe(48))"                      # APP_SECRET_KEY
 python -c "import base64,nacl.utils;print(base64.b64encode(nacl.utils.random(32)).decode())"  # BROKER_CRED_KEY
+python -c "import secrets;print(secrets.token_urlsafe(32))"                      # METRICS_TOKEN
 ```
+*(Rotating `BROKER_CRED_KEY` later makes already-stored broker credentials
+undecryptable — they have to be re-entered. Rotating `APP_SECRET_KEY` currently
+invalidates nothing; see `.env.example`.)*
+
+### 2a. Settings that are silently wrong if you skip them
+
+These do not stop the stack from starting; they break a flow for your *users*, which
+is why they go unnoticed. In production the API logs an `insecure_production_config`
+warning for each one at startup — read the first page of `docker compose logs api`
+after the first deploy and treat a non-empty list as an unfinished deploy.
+
+| Setting | Skip it and… |
+| --- | --- |
+| `FRONTEND_URL=https://DOMAIN` | every password-reset email links to `localhost` |
+| `SMTP_USER` / `SMTP_PASSWORD` | no reset email is sent at all — the link is written to the log instead, so reset is broken *and* live tokens land in your log store (see `.env.example` for the Gmail App Password steps) |
+| `METRICS_TOKEN` | `/metrics` is fail-closed (404) and Prometheus scrapes nothing (§4) |
+| `COOKIE_SECURE=true` | session cookies are sent over plain HTTP |
+
+### 2b. Client IP behind the proxy (rate limiting + audit)
+
+Caddy terminates TLS, so to the API every request appears to come from the Caddy
+container. Left that way, the per-IP rate limits are one shared bucket for the whole
+platform (any visitor can exhaust the login budget for everyone) and every
+`audit_log.ip` records the proxy. Set in `infra/.env.prod`:
+```
+TRUST_PROXY_HEADERS=true
+TRUSTED_PROXY_HOPS=1        # 2 if Cloudflare (or another proxy) sits in front of Caddy
+```
+The API then reads the client address as the **Nth-from-the-right** `X-Forwarded-For`
+entry — the value your own proxy appended — and ignores the attacker-controllable
+entries to its left. Leave `TRUST_PROXY_HEADERS=false` for any deployment where the
+API is reached directly: trusting the header without a proxy in front lets any caller
+mint a private rate-limit bucket per request by inventing a value.
+
+Also set `trusted_proxies` in `infra/Caddyfile` if another proxy fronts Caddy, so
+Caddy itself does not forward a spoofed chain.
 
 ## 3. First deploy
 ```bash
@@ -71,12 +110,33 @@ docker compose -f infra/compose.prod.yaml --env-file infra/.env.prod run --rm ap
 Caddy obtains TLS automatically; the app is live at `https://DOMAIN`.
 
 ## 4. Observability (opt-in)
+
+`/metrics` is bearer-gated and answers **404** without a valid `METRICS_TOKEN` — so a
+scraper with no credential looks exactly like a dead application. Give Prometheus the
+token before starting the profile:
+```bash
+mkdir -p infra/secrets
+printf '%s' "$METRICS_TOKEN" > infra/secrets/metrics_token   # same value as in infra/.env.prod
+chmod 600 infra/secrets/metrics_token
+```
+and mount it into the prometheus service in `infra/compose.prod.yaml`:
+```yaml
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./secrets/metrics_token:/etc/prometheus/metrics_token:ro
+```
+(`infra/prometheus.yml` already references `/etc/prometheus/metrics_token`; Prometheus
+does not expand environment variables in its config, which is why this is a file and
+not `${METRICS_TOKEN}`. `secrets/` is git-ignored.)
+
 ```bash
 docker compose -f infra/compose.prod.yaml --env-file infra/.env.prod --profile observability up -d
 ```
 Prometheus scrapes `api:/metrics`; Promtail ships container logs to Loki; Grafana
 (behind your own tunnel/VPN — not exposed by Caddy) has both datasources provisioned.
 Retention is capped (Prometheus 15d, Loki 7d) to bound the VPS disk.
+Verify: the `trading-api` target must be **UP** in Prometheus → Status → Targets; a
+404 there means the token file and `METRICS_TOKEN` disagree.
 *Follow-up:* add OpenTelemetry traces (Tempo) + the trading SLI alerts.
 
 ## 5. Backups & recovery

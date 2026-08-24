@@ -35,20 +35,50 @@ for the HF secrets below.
 3. **huggingface.co/new-space** → name `tradepulse`, **SDK = Docker** (Blank),
    Hardware **CPU basic (free)**, **Public** *(needed for a reachable URL — the code
    becomes public; secrets stay in Settings)* → Create.
-4. **Space → Settings → Variables and secrets** → add these as **Secrets**:
+4. **Generate your own secrets first** (on your machine — each command prints one
+   value; never reuse a key you found in a document, including this one):
+   ```bash
+   python -c "import base64,nacl.utils;print(base64.b64encode(nacl.utils.random(32)).decode())"  # BROKER_CRED_KEY
+   python -c "import secrets;print(secrets.token_urlsafe(48))"                                   # APP_SECRET_KEY
+   python -c "import secrets;print(secrets.token_urlsafe(32))"                                   # TICK_SECRET
+   python -c "import secrets;print(secrets.token_urlsafe(32))"                                   # METRICS_TOKEN
+   ```
+   > ⚠️ **A shared key is not a key.** `BROKER_CRED_KEY` is what encrypts broker API
+   > credentials at rest. If two people paste the same value, either can decrypt the
+   > other's credentials — the encryption becomes decoration. The same applies to
+   > `APP_SECRET_KEY` and `TICK_SECRET`. Generate each one yourself, keep it only in
+   > the Space's secret store, and rotate it if it is ever pasted anywhere else.
+   > (Rotating `BROKER_CRED_KEY` makes already-stored broker credentials
+   > undecryptable — you have to re-enter them.)
+5. **Space → Settings → Variables and secrets** → add these as **Secrets**:
    - `DATABASE_URL` = your Neon `+asyncpg…/tradepulse?sslmode=require`
    - `REDIS_URL` = your Upstash `rediss://…`
-   - `BROKER_CRED_KEY` = `879AbT3ObZztEDuN6J+D7NKSZMk2PMvoOCvGfv4VWmk=` *(test key)*
+   - `BROKER_CRED_KEY` = the value you generated above
    - `GEMINI_API_KEY` = your rotated key
-   - `APP_SECRET_KEY` = a long random string (`secrets.token_urlsafe(48)`)
-   - `TICK_SECRET` = a random string (used by the cron in Part F)
+   - `APP_SECRET_KEY` = the value you generated above
+   - `TICK_SECRET` = the value you generated above (used by the cron in Part F)
+   - `TRUST_PROXY_HEADERS` = `true` and `TRUSTED_PROXY_HOPS` = `1` — **required here.**
+     HF Spaces terminates TLS upstream, so without these every visitor is seen as the
+     same proxy IP and shares a single rate-limit bucket. Leave them unset anywhere the
+     API is reachable directly: trusting a forwarded header from an untrusted peer lets
+     anyone spoof their way past the limits entirely.
+   - `NEXT_PUBLIC_SITE_URL` (set on Vercel in Part E, not here) = your public URL. It is
+     inlined at BUILD time, and without it the site is served `noindex` with an empty
+     sitemap by design, rather than claiming a domain it cannot verify.
    - `CORS_ALLOW_ORIGINS` = your Vercel URL (placeholder now; update after Part E)
-5. Push the code to the Space (from the repo root):
+   - `FRONTEND_URL` = the same Vercel URL — **password-reset links are built from
+     this**. Leave it unset and every reset email points at `http://localhost:3000`,
+     which is a dead link for everyone but you.
+   - `SMTP_USER` / `SMTP_PASSWORD` = a Gmail address + a Google **App Password**
+     (Account → Security → 2-Step Verification → App passwords). Leave them unset
+     and no reset email is ever sent — the link is written to the Space logs instead,
+     so password reset silently does not work for your users.
+6. Push the code to the Space (from the repo root):
    ```bash
    git remote add space https://huggingface.co/spaces/mubin-attar-007/tradepulse
    git push space main --force      # username = your HF user, password = the Write token
    ```
-6. The Space builds from the root `Dockerfile` (watch **Logs**). On start it runs
+7. The Space builds from the root `Dockerfile` (watch **Logs**). On start it runs
    migrations + seeds the instruments, then serves. When it shows **Running**, the
    API is at `https://mubin-attar-007-tradepulse.hf.space`.
    Check `…hf.space/health` → `{"status":"ok"}` and `…hf.space/ready` → db+redis.
@@ -62,25 +92,40 @@ for the HF secrets below.
    - `NEXT_PUBLIC_API_BASE` = `/api`
    - `NEXT_PUBLIC_WS_URL` = `wss://mubin-attar-007-tradepulse.hf.space/market/ws`
 4. Deploy → you get `https://your-app.vercel.app`.
-5. Back on **HF → Settings → secrets**, set `CORS_ALLOW_ORIGINS = https://your-app.vercel.app`
-   (the Space restarts). *(Live charts are best-effort; history + periodic refresh
-   always work.)*
+5. Back on **HF → Settings → secrets**, set **both** to your real Vercel URL
+   (the Space restarts):
+   - `CORS_ALLOW_ORIGINS = https://your-app.vercel.app`
+   - `FRONTEND_URL = https://your-app.vercel.app` — password-reset emails are built
+     from this; left at the default they link to `localhost` and nobody can reset.
+
+   *(Live charts are best-effort; history + periodic refresh always work.)*
 
 ## Part F — Live updates + history (no shell needed)
 **Cron** (cron-job.org → free, no card): create a job →
-`POST https://mubin-attar-007-tradepulse.hf.space/internal/tick?key=<TICK_SECRET>`
-every **5 minutes** (polls bars + advances paper sessions, and keeps the Space awake).
+`POST https://mubin-attar-007-tradepulse.hf.space/internal/tick`, and in the job's
+**Headers** tab add `Authorization: Bearer <TICK_SECRET>`. Run it every **5 minutes**
+(polls bars + advances paper sessions, and keeps the Space awake).
+
+> Put the secret in the **header**, not in the URL. `?key=<TICK_SECRET>` is still
+> accepted for schedulers that cannot set headers, but URLs are recorded verbatim in
+> proxy and host access logs, so a secret in a query string is a secret you have
+> published to every log reader.
 
 **Load history once** (run locally, or as a one-off cron job):
 ```bash
-curl -X POST "https://mubin-attar-007-tradepulse.hf.space/internal/backfill?symbol=BTC/USD&days=2&key=<TICK_SECRET>"
-curl -X POST "https://mubin-attar-007-tradepulse.hf.space/internal/backfill?symbol=ETH/USD&days=2&key=<TICK_SECRET>"
+H="Authorization: Bearer <TICK_SECRET>"
+curl -X POST -H "$H" "https://mubin-attar-007-tradepulse.hf.space/internal/backfill?symbol=BTC/USD&days=2"
+curl -X POST -H "$H" "https://mubin-attar-007-tradepulse.hf.space/internal/backfill?symbol=ETH/USD&days=2"
 ```
 
 Open your Vercel URL → register → dashboard. (First load after idle may take
 ~30–60s while the Space wakes.)
 
 ## Notes
+- **Check the startup log after the first boot.** In production the API logs an
+  `insecure_production_config` warning for each of: `FRONTEND_URL` still pointing at
+  localhost, SMTP unconfigured, `COOKIE_SECURE=false`, and metrics enabled with no
+  `METRICS_TOKEN`. An empty warning list is the signal that this part is done.
 - **Upstash free** = 500K Redis commands/month — fine at a 5-min cadence.
 - **Neon free** autosuspends; first query after idle adds ~1s.
 - Real-money live trading stays **off** (`LIVE_TRADING_ENABLED=false`).

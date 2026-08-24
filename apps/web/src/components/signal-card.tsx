@@ -31,12 +31,15 @@ function fmtSize(v: string): string {
 }
 
 /**
- * The F2 signal card. Evaluates a StrategySpec against an instrument's latest CLOSED
- * bar (server-side, real engine math) and shows the INTENDED entry/stop/target/size.
+ * Evaluates a StrategySpec against an instrument's latest CLOSED bar (server-side, real
+ * engine math) and shows what the engine WOULD intend: entry, stop, target, size.
  *
- * HONESTY: every price carries a DELAYED DataBadge (invariant #3). This is NOT an
- * executable order — the footer says so and live trading stays gated. Numbers are
- * the engine's own output (invariant #4); the client never does money math.
+ * Framing is load-bearing here. A card headed "Signal" with a green "Entry signal" chip
+ * is indistinguishable, at a glance, from a signal service telling someone to buy — so
+ * the copy says rule check, states which rule, and reports whether the condition is
+ * true, not what anyone should do. Every price carries a DELAYED DataBadge (invariant
+ * #3), the result is explicitly not an order, live trading stays gated, and the numbers
+ * are the engine's own output (invariant #4) — the client never does money math.
  */
 export function SignalCard({
   instrumentId,
@@ -57,12 +60,12 @@ export function SignalCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Signal · {spec.name}</CardTitle>
+        <CardTitle>Rule check · {spec.name}</CardTitle>
         {data ? (
           data.should_enter ? (
-            <Badge variant="profit">Entry signal</Badge>
+            <Badge variant="accent">Condition met</Badge>
           ) : (
-            <Badge variant="default">No entry</Badge>
+            <Badge variant="default">Condition not met</Badge>
           )
         ) : null}
       </CardHeader>
@@ -89,8 +92,8 @@ function Body({ data, hasEquity }: { data: Signal; hasEquity: boolean }) {
     <>
       <p className="text-sm text-muted-foreground">
         {data.should_enter
-          ? "The entry rule fires on the latest closed bar. If taken, the engine would intend:"
-          : "The entry rule does not fire on the latest closed bar. If it did, the engine would intend:"}
+          ? "This strategy's entry condition is true on the latest closed bar. Had the engine been running it, it would have intended:"
+          : "This strategy's entry condition is false on the latest closed bar. Had it been true, the engine would have intended:"}
       </p>
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
@@ -124,8 +127,9 @@ function Body({ data, hasEquity }: { data: Signal; hasEquity: boolean }) {
       >
         <Info size={14} className="mt-0.5 shrink-0" />
         <span>
-          Not an executable order. Prices are DELAYED and modeled on the last closed bar; a real fill
-          would occur at the next bar&apos;s open. Live trading is not enabled.
+          A hypothetical illustration of one fixed rule — not a signal, not advice, and not an
+          executable order. Prices are DELAYED and modelled on the last closed bar; a real fill
+          would occur at the next bar&apos;s open. Live trading is not enabled on this platform.
         </span>
       </div>
     </>

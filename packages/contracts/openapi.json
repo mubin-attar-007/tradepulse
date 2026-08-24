@@ -1,6 +1,52 @@
 {
   "components": {
     "schemas": {
+      "AIStatusOut": {
+        "description": "What the AI layer can actually do right now.\n\nExists because the baseline failure mode was invisible: an expired key produced\na 500 on every request with no way to see that the provider chain was empty.",
+        "properties": {
+          "chain": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Chain",
+            "type": "array"
+          },
+          "installed_local_models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Installed Local Models",
+            "type": "array"
+          },
+          "local_only": {
+            "title": "Local Only",
+            "type": "boolean"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "profiles": {
+            "items": {
+              "$ref": "#/components/schemas/ProfileOut"
+            },
+            "title": "Profiles",
+            "type": "array"
+          }
+        },
+        "required": [
+          "local_only",
+          "chain",
+          "profiles",
+          "installed_local_models",
+          "notes"
+        ],
+        "title": "AIStatusOut",
+        "type": "object"
+      },
       "AlertOut": {
         "description": "One fired paper-trading alert (entry/exit fill or risk event).",
         "properties": {
@@ -42,6 +88,90 @@
           "created_at"
         ],
         "title": "AlertOut",
+        "type": "object"
+      },
+      "AttemptOut": {
+        "properties": {
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "number"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tokens_in": {
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "title": "Tokens Out",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "index",
+          "profile",
+          "provider",
+          "model",
+          "prompt",
+          "tokens_in",
+          "tokens_out",
+          "latency_ms",
+          "status",
+          "error"
+        ],
+        "title": "AttemptOut",
+        "type": "object"
+      },
+      "AxisIn": {
+        "description": "One swept parameter. ``path`` must address a whitelisted numeric leaf.",
+        "properties": {
+          "path": {
+            "description": "A sweepable parameter, e.g. 'indicators.<id>.params.period', 'exit.stop_loss_pct', 'sizing.value', 'risk.max_position_pct'.",
+            "maxLength": 120,
+            "title": "Path",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 25,
+            "minItems": 1,
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "path",
+          "values"
+        ],
+        "title": "AxisIn",
         "type": "object"
       },
       "BacktestOut": {
@@ -336,6 +466,63 @@
         "title": "ChangePasswordRequest",
         "type": "object"
       },
+      "ClarifyRequest": {
+        "properties": {
+          "prompt": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "title": "ClarifyRequest",
+        "type": "object"
+      },
+      "ClarifyResponse": {
+        "description": "Deterministic pre-flight: what is unclear, unsupported, or already understood.\n\nRuns with no model call at all, so it is instant and free, and it is the same\nextraction the semantic checker later verifies the model against.",
+        "properties": {
+          "ambiguities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ambiguities",
+            "type": "array"
+          },
+          "constraints": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Constraints",
+            "type": "array"
+          },
+          "understood": {
+            "additionalProperties": true,
+            "title": "Understood",
+            "type": "object"
+          },
+          "unsupported": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unsupported",
+            "type": "array"
+          }
+        },
+        "required": [
+          "understood",
+          "ambiguities",
+          "unsupported",
+          "constraints"
+        ],
+        "title": "ClarifyResponse",
+        "type": "object"
+      },
       "Comparison": {
         "additionalProperties": false,
         "properties": {
@@ -425,6 +612,45 @@
           "strategy_id"
         ],
         "title": "DeployRequest",
+        "type": "object"
+      },
+      "ExecuteRequest": {
+        "description": "Everything needed to resume an approved run.\n\nThe client returns the proposal it was shown. Nothing is trusted: the token is\nverified against hashes recomputed from these fields, so a client that edits the\nspec or the plan before approving simply fails verification.",
+        "properties": {
+          "approval_token": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Approval Token",
+            "type": "string"
+          },
+          "data_fingerprint": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Data Fingerprint",
+            "type": "string"
+          },
+          "plan": {
+            "additionalProperties": true,
+            "title": "Plan",
+            "type": "object"
+          },
+          "request": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Request",
+            "type": "string"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/StrategySpec-Input"
+          }
+        },
+        "required": [
+          "request",
+          "spec",
+          "data_fingerprint",
+          "approval_token"
+        ],
+        "title": "ExecuteRequest",
         "type": "object"
       },
       "ExitRule-Input": {
@@ -591,40 +817,458 @@
         "title": "ExitRule",
         "type": "object"
       },
-      "ExplainRequest": {
+      "ExperimentOut": {
+        "description": "A persisted experiment, carrying its own provenance.",
         "properties": {
-          "context": {
-            "additionalProperties": true,
-            "title": "Context",
-            "type": "object"
+          "bars": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bars"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "cost_model_version": {
+            "title": "Cost Model Version",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "data_fingerprint": {
+            "title": "Data Fingerprint",
+            "type": "string"
+          },
+          "end_ts": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Ts"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "error_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Category"
+          },
+          "hypothesis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hypothesis"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "metrics_version": {
+            "title": "Metrics Version",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "spec_hash": {
+            "title": "Spec Hash",
+            "type": "string"
+          },
+          "start_ts": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Ts"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "strategy_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Id"
+          },
+          "strategy_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Version"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "timeframe": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeframe"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
           }
         },
         "required": [
-          "context"
+          "id",
+          "kind",
+          "status",
+          "title",
+          "hypothesis",
+          "strategy_id",
+          "strategy_version",
+          "spec_hash",
+          "symbol",
+          "timeframe",
+          "start_ts",
+          "end_ts",
+          "data_fingerprint",
+          "bars",
+          "engine_version",
+          "metrics_version",
+          "cost_model_version",
+          "seed",
+          "config",
+          "result",
+          "error",
+          "error_category",
+          "parent_id",
+          "tags",
+          "notes",
+          "created_at",
+          "completed_at"
+        ],
+        "title": "ExperimentOut",
+        "type": "object"
+      },
+      "ExperimentSummaryOut": {
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "data_fingerprint": {
+            "title": "Data Fingerprint",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "spec_hash": {
+            "title": "Spec Hash",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
+          "timeframe": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeframe"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "verdict": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "title",
+          "symbol",
+          "timeframe",
+          "spec_hash",
+          "data_fingerprint",
+          "created_at",
+          "completed_at"
+        ],
+        "title": "ExperimentSummaryOut",
+        "type": "object"
+      },
+      "ExplainRequest": {
+        "description": "Narration is anchored to a PERSISTED experiment, never to client-supplied numbers.\n\nThe v1 endpoint accepted an arbitrary context dict from the request body, so any\ncaller could have the model narrate figures of their own invention while the\noutput was described as grounded.",
+        "properties": {
+          "experiment_id": {
+            "format": "uuid",
+            "title": "Experiment Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "experiment_id"
         ],
         "title": "ExplainRequest",
         "type": "object"
       },
       "ExplainResponse": {
         "properties": {
+          "grounding": {
+            "$ref": "#/components/schemas/GroundingOut"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "number"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          },
           "provider": {
             "title": "Provider",
             "type": "string"
           },
+          "routing": {
+            "items": {
+              "$ref": "#/components/schemas/RoutingStepOut"
+            },
+            "title": "Routing",
+            "type": "array"
+          },
           "text": {
             "title": "Text",
             "type": "string"
+          },
+          "tokens": {
+            "title": "Tokens",
+            "type": "integer"
           }
         },
         "required": [
           "text",
-          "provider"
+          "profile",
+          "provider",
+          "model",
+          "prompt",
+          "tokens",
+          "latency_ms",
+          "routing",
+          "grounding"
         ],
         "title": "ExplainResponse",
         "type": "object"
       },
       "GenerateStrategyRequest": {
         "properties": {
+          "profile": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile"
+          },
           "prompt": {
             "maxLength": 2000,
             "minLength": 3,
@@ -640,19 +1284,166 @@
       },
       "GenerateStrategyResponse": {
         "properties": {
-          "provider": {
-            "title": "Provider",
+          "ambiguities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ambiguities",
+            "type": "array"
+          },
+          "applied_defaults": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Applied Defaults",
+            "type": "array"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/AttemptOut"
+            },
+            "title": "Attempts",
+            "type": "array"
+          },
+          "deterministic_only": {
+            "title": "Deterministic Only",
+            "type": "boolean"
+          },
+          "message": {
+            "title": "Message",
             "type": "string"
           },
+          "repairs": {
+            "title": "Repairs",
+            "type": "integer"
+          },
+          "routing": {
+            "items": {
+              "$ref": "#/components/schemas/RoutingStepOut"
+            },
+            "title": "Routing",
+            "type": "array"
+          },
+          "semantic_issues": {
+            "items": {
+              "$ref": "#/components/schemas/SemanticIssueOut"
+            },
+            "title": "Semantic Issues",
+            "type": "array"
+          },
           "spec": {
-            "$ref": "#/components/schemas/StrategySpec-Output"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StrategySpec-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spec_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spec Hash"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_latency_ms": {
+            "title": "Total Latency Ms",
+            "type": "number"
+          },
+          "total_tokens": {
+            "title": "Total Tokens",
+            "type": "integer"
+          },
+          "unsupported": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unsupported",
+            "type": "array"
           }
         },
         "required": [
+          "status",
+          "message",
           "spec",
-          "provider"
+          "spec_hash",
+          "applied_defaults",
+          "ambiguities",
+          "unsupported",
+          "semantic_issues",
+          "attempts",
+          "routing",
+          "repairs",
+          "total_tokens",
+          "total_latency_ms",
+          "deterministic_only"
         ],
         "title": "GenerateStrategyResponse",
+        "type": "object"
+      },
+      "GroundingOut": {
+        "properties": {
+          "causal_claims": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Causal Claims",
+            "type": "array"
+          },
+          "has_disclosure": {
+            "title": "Has Disclosure",
+            "type": "boolean"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "predictive_claims": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Predictive Claims",
+            "type": "array"
+          },
+          "supported_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Supported Numbers",
+            "type": "array"
+          },
+          "unsupported_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unsupported Numbers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ok",
+          "supported_numbers",
+          "unsupported_numbers",
+          "causal_claims",
+          "predictive_claims",
+          "has_disclosure",
+          "method"
+        ],
+        "title": "GroundingOut",
         "type": "object"
       },
       "Group-Input": {
@@ -817,6 +1608,7 @@
       },
       "IndicatorSpec": {
         "additionalProperties": false,
+        "description": "One catalog entry instantiated with concrete parameters.",
         "properties": {
           "id": {
             "maxLength": 40,
@@ -1343,6 +2135,77 @@
         "title": "PositionSizing",
         "type": "object"
       },
+      "ProfileOut": {
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "circuit_state": {
+            "title": "Circuit State",
+            "type": "string"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "context_tokens": {
+            "title": "Context Tokens",
+            "type": "integer"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "local": {
+            "title": "Local",
+            "type": "boolean"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "provider",
+          "model",
+          "local",
+          "capabilities",
+          "context_tokens",
+          "description",
+          "configured",
+          "circuit_state"
+        ],
+        "title": "ProfileOut",
+        "type": "object"
+      },
+      "ProposeRequest": {
+        "properties": {
+          "request": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Request",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "ProposeRequest",
+        "type": "object"
+      },
       "PublicChartBar": {
         "description": "OHLCV bar timestamp + values (timestamps parallel the indicator series).",
         "properties": {
@@ -1555,7 +2418,14 @@
           },
           "metrics": {
             "additionalProperties": {
-              "type": "number"
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "title": "Metrics",
             "type": "object"
@@ -1625,7 +2495,14 @@
           },
           "metrics": {
             "additionalProperties": {
-              "type": "number"
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "title": "Metrics",
             "type": "object"
@@ -1685,7 +2562,14 @@
           },
           "metrics": {
             "additionalProperties": {
-              "type": "number"
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "title": "Metrics",
             "type": "object"
@@ -1837,6 +2721,151 @@
           }
         },
         "title": "RiskLimits",
+        "type": "object"
+      },
+      "RobustnessSuiteRequest": {
+        "properties": {
+          "anchored": {
+            "default": true,
+            "title": "Anchored",
+            "type": "boolean"
+          },
+          "axes": {
+            "items": {
+              "$ref": "#/components/schemas/AxisIn"
+            },
+            "maxItems": 3,
+            "title": "Axes",
+            "type": "array"
+          },
+          "cost_multiples": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Cost Multiples",
+            "type": "array"
+          },
+          "embargo_bars": {
+            "default": 0,
+            "maximum": 500.0,
+            "minimum": 0.0,
+            "title": "Embargo Bars",
+            "type": "integer"
+          },
+          "end": {
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "folds": {
+            "default": 4,
+            "maximum": 10.0,
+            "minimum": 2.0,
+            "title": "Folds",
+            "type": "integer"
+          },
+          "hypothesis": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hypothesis"
+          },
+          "monte_carlo_samples": {
+            "default": 1000,
+            "maximum": 5000.0,
+            "minimum": 100.0,
+            "title": "Monte Carlo Samples",
+            "type": "integer"
+          },
+          "seed": {
+            "default": 7,
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          },
+          "strategy_id": {
+            "format": "uuid",
+            "title": "Strategy Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy_id",
+          "start",
+          "end"
+        ],
+        "title": "RobustnessSuiteRequest",
+        "type": "object"
+      },
+      "RoutingStepOut": {
+        "properties": {
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "profile": {
+            "title": "Profile",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile",
+          "provider",
+          "outcome",
+          "reason"
+        ],
+        "title": "RoutingStepOut",
+        "type": "object"
+      },
+      "SemanticIssueOut": {
+        "description": "A place the generated strategy departs from the request.\n\nSurfaced rather than auto-corrected: the user decides whether the model or their\nown wording was wrong, and a checker that silently rewrites output hides exactly\nthe failure it exists to expose.",
+        "properties": {
+          "evidence": {
+            "title": "Evidence",
+            "type": "string"
+          },
+          "expected": {
+            "title": "Expected",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "problem": {
+            "title": "Problem",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "expected",
+          "evidence",
+          "problem"
+        ],
+        "title": "SemanticIssueOut",
         "type": "object"
       },
       "SignalOut": {
@@ -2390,9 +3419,52 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/ai/clarify": {
+      "post": {
+        "description": "What the platform understands from a request \u2014 with no model call.\n\nInstant and free, so a user can see how their wording will be read before\nspending a slow local generation on it. It is the same extraction the semantic\nchecker later holds the model to, which is why it is worth exposing.",
+        "operationId": "clarify_ai_clarify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClarifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClarifyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clarify",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
     "/ai/explain": {
       "post": {
-        "operationId": "explain_backtest_ai_explain_post",
+        "description": "Explain a stored experiment using only the numbers it actually contains.",
+        "operationId": "explain_experiment_ai_explain_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2425,7 +3497,29 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Explain Backtest",
+        "summary": "Explain Experiment",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/ai/status": {
+      "get": {
+        "description": "What the AI layer can do right now, and why a profile is unavailable.",
+        "operationId": "ai_status_ai_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ai Status",
         "tags": [
           "ai"
         ]
@@ -2433,6 +3527,7 @@
     },
     "/ai/strategy": {
       "post": {
+        "description": "Natural language -> a validated StrategySpec, with the full trace.",
         "operationId": "generate_strategy_ai_strategy_post",
         "requestBody": {
           "content": {
@@ -3042,6 +4137,131 @@
         "summary": "Position Size",
         "tags": [
           "calc"
+        ]
+      }
+    },
+    "/experiments": {
+      "get": {
+        "operationId": "list_experiments_experiments_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "strategy_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Strategy Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ExperimentSummaryOut"
+                  },
+                  "title": "Response List Experiments Experiments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Experiments",
+        "tags": [
+          "experiments"
+        ]
+      }
+    },
+    "/experiments/{experiment_id}": {
+      "get": {
+        "operationId": "get_experiment_experiments__experiment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Experiment",
+        "tags": [
+          "experiments"
         ]
       }
     },
@@ -3913,6 +5133,136 @@
         "summary": "Readiness probe (DB + Redis)",
         "tags": [
           "system"
+        ]
+      }
+    },
+    "/research/execute": {
+      "post": {
+        "description": "Run an approved plan and return the report.\n\nThe approval is re-derived from the submitted content, so it cannot be reused\nfor a different strategy, a different dataset, or a different plan.",
+        "operationId": "execute_research_execute_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Execute Research Execute Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Execute",
+        "tags": [
+          "research-copilot"
+        ]
+      }
+    },
+    "/research/propose": {
+      "post": {
+        "description": "Understand the request, propose a strategy, and plan an experiment.\n\nRuns no experiment and saves no strategy. The response carries the plan, every\nassumption applied, every disagreement between the request and the proposal, and\nan approval token for exactly this proposal.",
+        "operationId": "propose_research_propose_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Propose Research Propose Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Propose",
+        "tags": [
+          "research-copilot"
+        ]
+      }
+    },
+    "/robustness/suite": {
+      "post": {
+        "description": "Run walk-forward, cost stress, resampling and (optionally) a parameter sweep,\nthen return a stability verdict with the evidence behind every check.",
+        "operationId": "run_robustness_suite_robustness_suite_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RobustnessSuiteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Robustness Suite",
+        "tags": [
+          "robustness"
         ]
       }
     },

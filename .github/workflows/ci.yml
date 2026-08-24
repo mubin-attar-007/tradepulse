@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       db:
-        image: timescale/timescaledb:2.17.2-pg16
+        image: timescale/timescaledb:2.18.2-pg16
         env:
           POSTGRES_USER: trading
           POSTGRES_PASSWORD: trading
@@ -57,6 +57,16 @@ jobs:
           git diff --exit-code packages/contracts/openapi.json
       - name: Tests (pytest + coverage report)
         run: uv run pytest --cov=app --cov-report=term-missing
+      # The AI evaluation suite runs against the DETERMINISTIC provider: no API key,
+      # no model download, no network, ~1 second. It is a semantic regression gate —
+      # a change that quietly alters how a request is interpreted fails here with the
+      # specific case and the specific difference, rather than surfacing later as a
+      # strategy that backtests wrong. Model-backed evaluation is run deliberately
+      # (`--profile local-balanced`), never in CI, where it would measure the runner.
+      - name: AI evaluation suite (deterministic)
+        env:
+          AI_PROFILE_CHAIN_RAW: deterministic
+        run: uv run python -m app.cli.evaluate --profile deterministic --min-pass-rate 1.0
       - name: Dependency vulnerability audit (informational)
         run: uv run --with pip-audit pip-audit
         continue-on-error: true

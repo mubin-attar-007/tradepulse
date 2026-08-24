@@ -33,7 +33,10 @@ const NAV: { title: string; items: Item[] }[] = [
       { label: "Backtesting", href: "/backtests", icon: FlaskConical },
       { label: "Paper Trading", href: "/paper", icon: PlayCircle },
       { label: "Calculator", href: "/calculator", icon: Calculator },
-      { label: "Alerts", href: "/alerts", icon: Bell },
+      // "Activity", not "Alerts": the backend exposes only GET /alerts, so this is a
+      // read-only log of what the paper engine did — there is no rule builder behind it
+      // and the old label promised one. Route path unchanged.
+      { label: "Activity", href: "/alerts", icon: Bell },
       // Deliberately gated behind hard risk controls — not an unbuilt "coming soon".
       { label: "Live Trading", icon: Radio, gated: true },
     ],
@@ -47,7 +50,7 @@ export function AppNavList({ onNavigate }: { onNavigate?: () => void }) {
     <nav className="flex-1 space-y-6 overflow-y-auto p-3">
       {NAV.map((group) => (
         <div key={group.title}>
-          <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+          <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             {group.title}
           </div>
           <div className="space-y-0.5">
@@ -75,7 +78,7 @@ export function AppNavList({ onNavigate }: { onNavigate?: () => void }) {
                 <span
                   key={item.label}
                   title="Real-money trading is intentionally gated behind hard risk controls."
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground/70"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground"
                 >
                   <Icon size={16} />
                   {item.label}

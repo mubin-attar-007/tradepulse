@@ -15,50 +15,43 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.modules.indicators.catalog import (
+    INDICATOR_OUTPUTS as _INDICATOR_OUTPUTS,
+)
+from app.modules.indicators.catalog import (
+    IndicatorSpec,
+    IndicatorType,
+    PriceField,
+)
+
 ENGINE_VERSION = "0.1.0"
 SPEC_VERSION: Literal["1.0"] = "1.0"
 
-IndicatorType = Literal["EMA", "SMA", "RSI", "ATR", "BBANDS", "MACD", "VWAP", "VOL_SMA"]
-PriceField = Literal["open", "high", "low", "close", "volume"]
 CompareOp = Literal[">", "<", ">=", "<=", "cross_above", "cross_below"]
 Timeframe = Literal["1m", "5m", "15m", "1h", "4h", "1d"]
 
-# Required params per indicator -> inclusive (min, max) range.
-_INDICATOR_PARAMS: dict[str, dict[str, tuple[float, float]]] = {
-    "EMA": {"period": (1, 1000)},
-    "SMA": {"period": (1, 1000)},
-    "RSI": {"period": (2, 1000)},
-    "ATR": {"period": (1, 1000)},
-    "VWAP": {},
-    "VOL_SMA": {"period": (1, 1000)},
-    "BBANDS": {"period": (2, 1000), "std": (0.1, 10)},
-    "MACD": {"fast": (1, 1000), "slow": (1, 1000), "signal": (1, 1000)},
-}
-# Multi-output indicators; everything else implicitly outputs "value".
-_INDICATOR_OUTPUTS: dict[str, set[str]] = {
-    "BBANDS": {"upper", "middle", "lower"},
-    "MACD": {"macd", "signal", "hist"},
-}
-
-
-class IndicatorSpec(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    id: str = Field(min_length=1, max_length=40, pattern=r"^[a-zA-Z][a-zA-Z0-9_]*$")
-    type: IndicatorType
-    params: dict[str, float] = Field(default_factory=dict)
-
-    @model_validator(mode="after")
-    def _validate_params(self) -> IndicatorSpec:
-        required = _INDICATOR_PARAMS[self.type]
-        for name, (lo, hi) in required.items():
-            if name not in self.params:
-                raise ValueError(f"{self.type} requires param '{name}'")
-            if not (lo <= self.params[name] <= hi):
-                raise ValueError(f"{self.type}.{name} must be in [{lo}, {hi}]")
-        unexpected = set(self.params) - set(required)
-        if unexpected:
-            raise ValueError(f"{self.type} got unexpected params {sorted(unexpected)}")
-        return self
+# The indicator catalog itself lives in app.modules.indicators (a primitive shared by
+# the chart API, the engine, and the feature store). Re-exported here so the DSL
+# remains the single import site for strategy authors.
+__all__ = [
+    "ENGINE_VERSION",
+    "SPEC_VERSION",
+    "CompareOp",
+    "Comparison",
+    "Condition",
+    "ExitRule",
+    "Group",
+    "IndicatorSpec",
+    "IndicatorType",
+    "Operand",
+    "PositionSizing",
+    "PriceField",
+    "RiskLimits",
+    "StrategySpec",
+    "TimeOfDayFilter",
+    "Timeframe",
+    "example_composite_spec",
+]
 
 
 class Operand(BaseModel):
@@ -207,7 +200,49 @@ class StrategySpec(BaseModel):
             atr = by_id.get(self.sizing.atr_ref or "")
             if atr is None or atr.type != "ATR":
                 raise ValueError("sizing.atr_ref must reference an ATR indicator")
+        self._reject_unsupported()
         return self
+
+    def _reject_unsupported(self) -> None:
+        """Refuse anything the engine cannot actually execute.
+
+        The alternative — accepting a field and quietly ignoring it — is the worst
+        failure mode a research tool can have, because the run still produces a
+        confident-looking equity curve. Each of these was previously accepted,
+        validated, described to the AI copilot, and then silently dropped:
+
+        * ``entry_short``: engine 0.1.0 is long-only, so a long/short strategy
+          backtested as long-only and reported a P&L missing an entire leg.
+        * ``universe`` beyond the first symbol: only ``universe[0]`` was ever run.
+        * ``max_open_positions > 1``: the engine holds a single position by
+          construction, so the limit did nothing.
+        * ``risk_per_trade`` without a stop: sizing silently degraded to
+          percent-of-equity, a completely different risk profile.
+
+        When a capability lands, the corresponding check is removed here — that is
+        deliberately the only place a capability boundary is declared.
+        """
+        if self.entry_short is not None:
+            raise ValueError(
+                f"short entries are not supported by engine {ENGINE_VERSION} "
+                "(the engine is long-only); remove 'entry_short'"
+            )
+        if len(self.universe) > 1:
+            raise ValueError(
+                f"engine {ENGINE_VERSION} backtests one instrument at a time; "
+                f"'universe' has {len(self.universe)} symbols. Run one strategy per symbol "
+                "and compare the experiments."
+            )
+        if self.risk.max_open_positions != 1:
+            raise ValueError(
+                f"engine {ENGINE_VERSION} holds at most one position; "
+                "'risk.max_open_positions' must be 1"
+            )
+        if self.sizing.method == "risk_per_trade" and self.exit.stop_loss_pct is None:
+            raise ValueError(
+                "sizing.method='risk_per_trade' needs 'exit.stop_loss_pct' to define the "
+                "risk per unit; without it the size would fall back to percent-of-equity"
+            )
 
     def canonical_json(self) -> str:
         return json.dumps(self.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))

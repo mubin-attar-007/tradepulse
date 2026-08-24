@@ -72,7 +72,7 @@ export function NumberInput({
           </span>
         ) : null}
       </span>
-      {hint ? <span className="text-[11px] text-muted-foreground/70">{hint}</span> : null}
+      {hint ? <span className="text-[11px] text-muted-foreground">{hint}</span> : null}
     </label>
   );
 }

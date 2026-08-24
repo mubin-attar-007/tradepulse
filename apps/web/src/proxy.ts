@@ -35,9 +35,20 @@ export function proxy(request: NextRequest): NextResponse {
   const isPublicMarket = pathname.startsWith("/markets/");
   const isPublic =
     isPublicMarket || PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-  const bounceWhenAuthed = AUTHED_REDIRECT_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
+  // `?reauth=1` is set by the API client when a request came back 401 (lib/api/client.ts).
+  // The cookie is HttpOnly, so an EXPIRED session still counts as "present" here — without
+  // this escape hatch the user bounces /login -> /dashboard -> 401 -> /login forever and can
+  // never reach the form. Presence is not validity; this is where that distinction lands.
+  //
+  // Scoped to /login, because reaching the sign-in FORM is the entire job. Honouring the flag
+  // on every AUTHED_REDIRECT_PATH also honours it on "/", so a signed-in user following any
+  // link carrying `?reauth=1` lands on the marketing page instead of their dashboard.
+  const wantsReauth =
+    (pathname === "/login" || pathname.startsWith("/login/")) &&
+    request.nextUrl.searchParams.has("reauth");
+  const bounceWhenAuthed =
+    !wantsReauth &&
+    AUTHED_REDIRECT_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   const hasSession = SESSION_COOKIES.some((c) => request.cookies.has(c));
 
   if (!isPublic && !hasSession) {

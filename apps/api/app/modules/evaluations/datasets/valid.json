@@ -1,0 +1,2850 @@
+{
+  "version": "1.0.0",
+  "cases": [
+    {
+      "id": "valid-ma-cross-001",
+      "category": "valid",
+      "request": "Buy BTC/USD on the 1h chart when the 20-period EMA crosses above the 50-period EMA, and exit when it crosses back below. Use a 2% stop loss.",
+      "tags": [
+        "crossover",
+        "ema",
+        "reverse-exit",
+        "stop"
+      ],
+      "notes": "The canonical request. Both legs of the cross, both periods, the instrument, the timeframe and the stop must all survive intact - this is the case a silent EMA/SMA or 20/10 swap would break.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "1h",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:20",
+          "EMA:50"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-002",
+      "category": "valid",
+      "request": "Go long ETH/USD on the 4h chart when the 9 EMA crosses above the 21 EMA. Exit on the reverse cross below. Stop loss 3%.",
+      "tags": [
+        "crossover",
+        "ema",
+        "reverse-exit",
+        "stop"
+      ],
+      "notes": "Same shape as 001 but with 'go long' instead of 'buy' and the bare '9 EMA' period form, so the parse cannot be keyed to one sentence pattern.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "4h",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:9",
+          "EMA:21"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-003",
+      "category": "valid",
+      "request": "On AAPL daily bars, enter when the 50 SMA crosses above the 200 SMA and exit when the 50 SMA crosses back below the 200 SMA. Use a 5% stop.",
+      "tags": [
+        "crossover",
+        "sma",
+        "reverse-exit",
+        "equities"
+      ],
+      "notes": "SMA rather than EMA, on an equity, with the periods repeated in the exit clause. Repeating the same indicator must not produce a third leg or a duplicated period.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "1d",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:50",
+          "SMA:200"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.05,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-004",
+      "category": "valid",
+      "request": "Enter MSFT on the 15-minute chart when the 8 EMA crosses above the 34 EMA. Take a 4% profit target and set a 2% stop loss.",
+      "tags": [
+        "crossover",
+        "ema",
+        "target",
+        "stop"
+      ],
+      "notes": "No reverse-cross exit: the only exits are a stop and a target. Nothing is asserted about exit operators on purpose - inventing a reverse-cross exit the user did not ask for is a silent strategy change.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "15m",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:8",
+          "EMA:34"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.02,
+        "take_profit_pct": 0.04,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-005",
+      "category": "valid",
+      "request": "On SPY daily, go long when the 10 EMA crosses above the 30 EMA; exit when it crosses back below. Use a 6% trailing stop.",
+      "tags": [
+        "crossover",
+        "ema",
+        "trailing",
+        "reverse-exit"
+      ],
+      "notes": "A trailing stop is the only percentage risk control. It must land in trailing_stop_pct and NOT be read as a fixed stop loss.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "1d",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:10",
+          "EMA:30"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "trailing_stop_pct": 0.06,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-006",
+      "category": "valid",
+      "request": "BTC/USD 5m: buy when the 5 EMA crosses over the 13 EMA, sell when the 5 EMA crosses back under the 13 EMA. 1% stop loss.",
+      "tags": [
+        "crossover",
+        "ema",
+        "reverse-exit",
+        "intraday"
+      ],
+      "notes": "Uses 'crosses over' and 'crosses back under' rather than above/below. Synonym handling is the point; a missed 'under' silently deletes the exit leg.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "5m",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:5",
+          "EMA:13"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.01,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-007",
+      "category": "valid",
+      "request": "I'd like a strategy on ETH/USD using hourly candles: enter long when the 12-period exponential moving average crosses above the 26-period exponential moving average, and close the trade when the 12-period EMA crosses back below the 26-period EMA. Protective stop at 2.5%.",
+      "tags": [
+        "crossover",
+        "ema",
+        "verbose",
+        "reverse-exit"
+      ],
+      "notes": "Verbose, fully spelled-out indicator names mixed with abbreviations, 'hourly' for the timeframe, and a fractional stop. Tests that the long form and the short form resolve to the same indicator.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "1h",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:12",
+          "EMA:26"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.025,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-008",
+      "category": "valid",
+      "request": "AAPL 4h: 20 EMA crosses above 50 EMA, 3% stop.",
+      "tags": [
+        "crossover",
+        "ema",
+        "terse"
+      ],
+      "notes": "Deliberately terse, telegraphic phrasing with no verb at all. A request does not have to be a sentence to be unambiguous.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "4h",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:20",
+          "EMA:50"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-009",
+      "category": "valid",
+      "request": "Enter SPY when the 21 SMA crosses above the 55 SMA on the 15m chart, exit when the 21 SMA crosses below the 55 SMA. 2% stop, 4% target.",
+      "tags": [
+        "crossover",
+        "sma",
+        "target",
+        "stop",
+        "reverse-exit"
+      ],
+      "notes": "Timeframe appears mid-sentence rather than up front, and a stop and target are stated together in shorthand. All four risk/exit numbers must be kept apart.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "15m",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:21",
+          "SMA:55"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.02,
+        "take_profit_pct": 0.04,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-010",
+      "category": "valid",
+      "request": "On BTC/USD 1h, go long when the 10 EMA crosses above the 50 SMA and exit when the 10 EMA crosses back below the 50 SMA. 3% stop loss.",
+      "tags": [
+        "crossover",
+        "ema",
+        "sma",
+        "mixed-types"
+      ],
+      "notes": "A cross between two DIFFERENT moving-average types. Collapsing both legs to one type is the classic silent error this asserts against.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "1h",
+        "indicators": [
+          "EMA",
+          "SMA"
+        ],
+        "periods": [
+          "EMA:10",
+          "SMA:50"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-011",
+      "category": "valid",
+      "request": "buy eth on the 4 hour chart when the 20 ema crosses above the 60 ema, exit on cross back below, stop 4%",
+      "tags": [
+        "crossover",
+        "ema",
+        "informal",
+        "lowercase"
+      ],
+      "notes": "All lower case, no punctuation, a bare 'eth' alias for the instrument and 'stop 4%' with the number last. Informal writing is the common case, not the exception.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "4h",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:20",
+          "EMA:60"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.04,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-012",
+      "category": "valid",
+      "request": "On BTC/USD 1m bars, enter when the 9 EMA crosses above the 21 EMA and exit when the 9 EMA crosses below the 21 EMA. Use a 0.5% stop loss.",
+      "tags": [
+        "crossover",
+        "ema",
+        "1m",
+        "sub-percent-stop"
+      ],
+      "notes": "Fastest timeframe plus a sub-one-percent stop. 0.5% must become 0.005, not 0.5 - the fraction-versus-percent confusion is a hundredfold risk error.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "1m",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:9",
+          "EMA:21"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.005,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-013",
+      "category": "valid",
+      "request": "MSFT 1h: buy when the 20 SMA crosses above the 50 SMA, exit on the reverse cross below. 2% stop loss, risking 1% per trade.",
+      "tags": [
+        "crossover",
+        "sma",
+        "sizing",
+        "risk-per-trade"
+      ],
+      "notes": "Risk-per-trade sizing WITH a stop, which is the only configuration the engine accepts for that method. Both the sizing method and the stop must be present or the compiler downgrades sizing silently.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "1h",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:20",
+          "SMA:50"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.02,
+        "sizing_method": "risk_per_trade",
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-014",
+      "category": "valid",
+      "request": "Go long AAPL on the 1d chart when the 30 EMA crosses above the 90 EMA. Take profit at 10% and use a 5% trailing stop.",
+      "tags": [
+        "crossover",
+        "ema",
+        "target",
+        "trailing"
+      ],
+      "notes": "A target and a trailing stop but no fixed stop loss. The two percentages must not be merged, and no stop_loss_pct should be invented from either of them.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "1d",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:30",
+          "EMA:90"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "take_profit_pct": 0.1,
+        "trailing_stop_pct": 0.05,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-015",
+      "category": "valid",
+      "request": "Enter ETH/USD on the 15-minute chart on the 7 EMA crossing above the 25 EMA, and exit on the 7 EMA crossing below the 25 EMA. 2% stop loss.",
+      "tags": [
+        "crossover",
+        "ema",
+        "gerund"
+      ],
+      "notes": "The cross is expressed as a gerund ('crossing above') rather than a finite verb. Verb morphology must not change the operator.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "15m",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:7",
+          "EMA:25"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-016",
+      "category": "valid",
+      "request": "SPY hourly: go long once the 20 SMA has crossed above the 100 SMA; close the trade when the 20 SMA crosses back below the 100 SMA. Stop loss of 4%.",
+      "tags": [
+        "crossover",
+        "sma",
+        "past-tense"
+      ],
+      "notes": "Past-tense 'has crossed above' plus 'Stop loss of 4%' with the number after the word. Tests the other ordering of the stop phrase.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "1h",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:20",
+          "SMA:100"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.04,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-017",
+      "category": "valid",
+      "request": "On BTC/USD 4h, buy when the 25 EMA crosses above the 99 EMA and sell when the 25 EMA crosses back below the 99 EMA.",
+      "tags": [
+        "crossover",
+        "ema",
+        "no-risk-stated"
+      ],
+      "notes": "No stop, target or trailing stop is stated at all. Nothing is asserted about risk here on purpose: the platform is entitled to apply a default protective stop, but it must not be mistaken for something the user asked for.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "4h",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:25",
+          "EMA:99"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-018",
+      "category": "valid",
+      "request": "MSFT on the 1h chart: enter when the 12 SMA crosses up through the 48 SMA, exit when it crosses down through the 48 SMA. 3% stop loss.",
+      "tags": [
+        "crossover",
+        "sma",
+        "up-through"
+      ],
+      "notes": "'crosses up through' / 'crosses down through' is a common trader idiom that reads like an adverb. It must map to crosses_above / crosses_below and not be dropped.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "1h",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:12",
+          "SMA:48"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-019",
+      "category": "valid",
+      "request": "ETH/USD daily: buy when the 50 SMA crosses above the 200 SMA (the golden cross) and exit when the 50 SMA crosses below the 200 SMA. 8% stop loss.",
+      "tags": [
+        "crossover",
+        "sma",
+        "jargon"
+      ],
+      "notes": "Contains a parenthetical nickname for the pattern. The nickname is colour, not a rule; it must not add a condition or change the periods.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "1d",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:50",
+          "SMA:200"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.08,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-020",
+      "category": "valid",
+      "request": "AAPL 5m: enter when the 15 EMA crosses above the 40 EMA. 1.5% stop loss and 3% take profit.",
+      "tags": [
+        "crossover",
+        "ema",
+        "stop",
+        "target"
+      ],
+      "notes": "A fractional stop paired with a whole-number target on a fast timeframe. Checks that 1.5% survives as 0.015 rather than being rounded.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "5m",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:15",
+          "EMA:40"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.015,
+        "take_profit_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-021",
+      "category": "valid",
+      "request": "SPY 4h: go long when the 13 EMA crosses above the 48 EMA and exit when the 13 EMA crosses back below the 48 EMA. 3% stop loss, 6% take profit.",
+      "tags": [
+        "crossover",
+        "ema",
+        "stop",
+        "target",
+        "reverse-exit"
+      ],
+      "notes": "All three exit mechanisms a user commonly combines: reverse cross, stop, target. All three must coexist rather than one displacing the others.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "4h",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:13",
+          "EMA:48"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.03,
+        "take_profit_pct": 0.06,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-022",
+      "category": "valid",
+      "request": "BTC/USD 15m: enter when the 10 SMA crosses above the 30 SMA, exit when the 10 SMA crosses below the 30 SMA. 2% stop loss.",
+      "tags": [
+        "crossover",
+        "sma",
+        "crypto",
+        "intraday"
+      ],
+      "notes": "SMA crossover on crypto intraday. Covers the SMA/crypto/intraday corner of the matrix that the EMA-heavy cases leave thin.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "15m",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:10",
+          "SMA:30"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-023",
+      "category": "valid",
+      "request": "MSFT 5m: buy when the 6 EMA crosses above the 18 EMA. 1% stop loss.",
+      "tags": [
+        "crossover",
+        "ema",
+        "entry-only"
+      ],
+      "notes": "Minimal complete request: one entry, one stop, nothing else. Anything extra in the answer is an invention.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "5m",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:6",
+          "EMA:18"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.01,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-024",
+      "category": "valid",
+      "request": "AAPL 1h: enter long when the 9 SMA crosses above the 21 SMA and close out when the 9 SMA crosses back below the 21 SMA. 2.5% stop loss.",
+      "tags": [
+        "crossover",
+        "sma",
+        "reverse-exit"
+      ],
+      "notes": "'close out' as the exit verb. Exit vocabulary varies far more than entry vocabulary and is where exit legs get lost.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "1h",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:9",
+          "SMA:21"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.025,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-025",
+      "category": "valid",
+      "request": "ETH/USD 5m: buy when the 3 EMA crosses above the 12 EMA, exit when the 3 EMA crosses back below the 12 EMA. 0.8% stop loss.",
+      "tags": [
+        "crossover",
+        "ema",
+        "short-periods"
+      ],
+      "notes": "Very short periods near the low end of the catalog range, with a fractional sub-percent stop. Small integers are where period swaps hide.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "5m",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:3",
+          "EMA:12"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.008,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-026",
+      "category": "valid",
+      "request": "SPY 1m: enter when the 5 SMA crosses above the 20 SMA. 0.5% stop loss.",
+      "tags": [
+        "crossover",
+        "sma",
+        "1m",
+        "entry-only"
+      ],
+      "notes": "Equity index on the 1m timeframe. Confirms the fastest timeframe is accepted for equities as well as crypto.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "1m",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:5",
+          "SMA:20"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.005,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-027",
+      "category": "valid",
+      "request": "BTC/USD 1d: go long when the 21 EMA crosses above the 55 EMA and exit when the 21 EMA crosses back below the 55 EMA. 7% stop loss.",
+      "tags": [
+        "crossover",
+        "ema",
+        "daily",
+        "crypto"
+      ],
+      "notes": "Daily crypto with a wide stop. Wide stops are as easy to mis-scale as narrow ones and are asserted for the same reason.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "1d",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:21",
+          "EMA:55"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.07,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-028",
+      "category": "valid",
+      "request": "MSFT 4h: buy when the 34 EMA crosses above the 89 EMA, and exit when the 34 EMA crosses below the 89 EMA. 4% stop loss.",
+      "tags": [
+        "crossover",
+        "ema",
+        "reverse-exit"
+      ],
+      "notes": "Non-round Fibonacci periods. A model that 'tidies' 34/89 into 30/90 has changed the strategy, and the period assertion catches exactly that.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "4h",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:34",
+          "EMA:89"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.04,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-029",
+      "category": "valid",
+      "request": "AAPL 15m: enter when the 12 EMA crosses above the 36 EMA, exit when the 12 EMA crosses back below the 36 EMA. 2% stop loss and 5% take profit.",
+      "tags": [
+        "crossover",
+        "ema",
+        "stop",
+        "target",
+        "reverse-exit"
+      ],
+      "notes": "Equity intraday with the full exit set. Pairs with 021 on a different symbol and timeframe so a symbol-specific regression is visible.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "15m",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:12",
+          "EMA:36"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.02,
+        "take_profit_pct": 0.05,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-030",
+      "category": "valid",
+      "request": "ETH/USD 1h: enter when the 24 SMA crosses above the 72 SMA and exit when the 24 SMA crosses back below the 72 SMA. 3% stop loss.",
+      "tags": [
+        "crossover",
+        "sma",
+        "reverse-exit"
+      ],
+      "notes": "A one-to-three period ratio on hourly crypto with SMAs. Fills the SMA/crypto/1h cell of the coverage matrix.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "1h",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:24",
+          "SMA:72"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-031",
+      "category": "valid",
+      "request": "SPY 5m: buy when the 4 EMA crosses above the 16 EMA. 1% stop loss, 2% take profit.",
+      "tags": [
+        "crossover",
+        "ema",
+        "entry-only",
+        "target"
+      ],
+      "notes": "A one-to-two reward-to-risk pairing on a fast chart. Both percentages are small and adjacent, which is where they get transposed.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "5m",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:4",
+          "EMA:16"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.01,
+        "take_profit_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-032",
+      "category": "valid",
+      "request": "BTC/USD 4h: go long when the 20 SMA crosses above the 60 SMA, exit when the 20 SMA crosses back below the 60 SMA. Use a 4% trailing stop.",
+      "tags": [
+        "crossover",
+        "sma",
+        "trailing",
+        "reverse-exit"
+      ],
+      "notes": "Trailing stop combined with a reverse-cross exit. The trailing percentage must not be copied into stop_loss_pct as well.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "4h",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:20",
+          "SMA:60"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "trailing_stop_pct": 0.04,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-033",
+      "category": "valid",
+      "request": "MSFT daily: enter when the 30 SMA crosses above the 120 SMA and exit when the 30 SMA crosses back below the 120 SMA. 6% stop loss.",
+      "tags": [
+        "crossover",
+        "sma",
+        "daily",
+        "equities"
+      ],
+      "notes": "Three-digit slow period on daily equities. Covers the long end of the period range without reaching the catalog limit.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "1d",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:30",
+          "SMA:120"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.06,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-034",
+      "category": "valid",
+      "request": "AAPL 4h: buy when the 11 EMA crosses above the 33 EMA and exit when the 11 EMA crosses back below the 33 EMA. 3% stop loss, risk 2% per trade.",
+      "tags": [
+        "crossover",
+        "ema",
+        "sizing",
+        "risk-per-trade"
+      ],
+      "notes": "Second risk-per-trade case with the 'risk N% per trade' phrasing rather than 'risking'. Sizing method and stop must both be present.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "4h",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:11",
+          "EMA:33"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.03,
+        "sizing_method": "risk_per_trade",
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-ma-cross-035",
+      "category": "valid",
+      "request": "ETH/USD 15m: enter when the 5 EMA crosses above the 34 EMA, exit when the 5 EMA crosses back below the 34 EMA. 2% stop loss.",
+      "tags": [
+        "crossover",
+        "ema",
+        "wide-ratio"
+      ],
+      "notes": "A very wide fast/slow ratio. Confirms the fast leg is chosen by period size and not by mention order or by which number looks 'normal'.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "15m",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:5",
+          "EMA:34"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-001",
+      "category": "valid",
+      "request": "Buy BTC/USD on the 1h chart when the 14-period RSI falls below 30. Use a 3% stop loss.",
+      "tags": [
+        "rsi",
+        "threshold",
+        "oversold"
+      ],
+      "notes": "The textbook RSI oversold entry with an explicit threshold. Only the entry side is asserted because the request states no exit rule.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "1h",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:14"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-002",
+      "category": "valid",
+      "request": "On AAPL daily, go long when RSI(14) drops under 25. 4% stop loss, 8% take profit.",
+      "tags": [
+        "rsi",
+        "threshold",
+        "parenthesised-period"
+      ],
+      "notes": "RSI(14) function-call notation and 'under' rather than 'below'. The threshold is 25, not the conventional 30 - a model that normalises it has substituted its own strategy.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "1d",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:14"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.04,
+        "take_profit_pct": 0.08,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-003",
+      "category": "valid",
+      "request": "ETH/USD 4h: enter when the 7-period RSI is oversold, exit when it is overbought. 5% stop loss.",
+      "tags": [
+        "rsi",
+        "oversold",
+        "overbought",
+        "conventional-thresholds"
+      ],
+      "notes": "'oversold'/'overbought' with no numbers. These have settled conventional meanings (30/70) so they are treated as clear rather than ambiguous, and both legs must appear.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "4h",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:7"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "exit_ops": [
+          "above"
+        ],
+        "stop_loss_pct": 0.05,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-004",
+      "category": "valid",
+      "request": "MSFT 15m: buy when RSI 14 goes below 35 and use a 2% stop.",
+      "tags": [
+        "rsi",
+        "threshold",
+        "bare-period"
+      ],
+      "notes": "'RSI 14' with the period trailing the name and no punctuation. Tests the third of the three ways people write an indicator period.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "15m",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:14"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-005",
+      "category": "valid",
+      "request": "SPY 1h - long entry when the 21-period RSI is less than 40, 3% stop loss.",
+      "tags": [
+        "rsi",
+        "threshold",
+        "less-than"
+      ],
+      "notes": "'less than' as the comparison and a non-standard 21 period. A 40 threshold is a deliberate departure from the 30 default.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "1h",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:21"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-006",
+      "category": "valid",
+      "request": "Go long BTC/USD on the 5m chart when RSI(2) < 10. Stop loss 1%.",
+      "tags": [
+        "rsi",
+        "threshold",
+        "symbolic-operator",
+        "edge-period"
+      ],
+      "notes": "Mathematical '<' notation and RSI period 2, the minimum the catalog allows. A period below 2 would have to be refused, so this pins the boundary as valid.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "5m",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:2"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.01,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-007",
+      "category": "valid",
+      "request": "Buy SPY daily when the 14 RSI is above 60 with a 5% stop loss.",
+      "tags": [
+        "rsi",
+        "threshold",
+        "momentum-direction"
+      ],
+      "notes": "An RSI entry on STRENGTH rather than weakness. Assuming every RSI rule is a mean-reversion buy-the-dip is a real failure mode; this asserts the 'above' direction.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "1d",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:14"
+        ],
+        "entry_ops": [
+          "above"
+        ],
+        "stop_loss_pct": 0.05,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-008",
+      "category": "valid",
+      "request": "On MSFT 4h, enter when the 10-period RSI rises above 70. 4% stop loss.",
+      "tags": [
+        "rsi",
+        "threshold",
+        "momentum-direction"
+      ],
+      "notes": "Entering at the conventionally 'overbought' level. The number 70 usually appears as an exit, so this checks it is read where it was actually written.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "4h",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:10"
+        ],
+        "entry_ops": [
+          "above"
+        ],
+        "stop_loss_pct": 0.04,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-009",
+      "category": "valid",
+      "request": "ETH/USD 1d: buy when the 14-period RSI is oversold and exit when it is overbought. Use a 6% stop loss.",
+      "tags": [
+        "rsi",
+        "oversold",
+        "overbought"
+      ],
+      "notes": "The oversold/overbought pair again on a different instrument, timeframe and period, so a pass on rsi-003 alone cannot be an accident of one phrasing.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "1d",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:14"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "exit_ops": [
+          "above"
+        ],
+        "stop_loss_pct": 0.06,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-010",
+      "category": "valid",
+      "request": "AAPL hourly: enter when RSI(9) dips below 28, take profit at 5%.",
+      "tags": [
+        "rsi",
+        "threshold",
+        "target-only"
+      ],
+      "notes": "A target with no stop loss stated. No stop is asserted: the request does not contain one, and asserting a default would test the default rather than the request.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "1h",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:9"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "take_profit_pct": 0.05,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-011",
+      "category": "valid",
+      "request": "Enter MSFT on the 1h chart when the 14-period RSI moves above 55; 3% stop loss and a 6% profit target.",
+      "tags": [
+        "rsi",
+        "threshold",
+        "stop",
+        "target"
+      ],
+      "notes": "A mid-range RSI threshold (55) that belongs to neither convention, so it can only come from reading the text.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "1h",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:14"
+        ],
+        "entry_ops": [
+          "above"
+        ],
+        "stop_loss_pct": 0.03,
+        "take_profit_pct": 0.06,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-012",
+      "category": "valid",
+      "request": "buy btc 15m when rsi(14) < 20, 2% stop",
+      "tags": [
+        "rsi",
+        "informal",
+        "lowercase",
+        "alias"
+      ],
+      "notes": "Entirely lower case with the 'btc' alias and no sentence structure. The alias must resolve to BTC/USD rather than being treated as an unknown ticker.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "15m",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:14"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-013",
+      "category": "valid",
+      "request": "On SPY 5m, go long when the 14 RSI is oversold. 1% stop loss and 2% take profit.",
+      "tags": [
+        "rsi",
+        "oversold",
+        "stop",
+        "target"
+      ],
+      "notes": "'oversold' as the only entry condition, with explicit risk numbers. No exit rule is asserted because the request states none.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "5m",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:14"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.01,
+        "take_profit_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-014",
+      "category": "valid",
+      "request": "ETH/USD hourly: buy when the relative strength index (14) drops below 32. 3% stop.",
+      "tags": [
+        "rsi",
+        "spelled-out",
+        "threshold"
+      ],
+      "notes": "The indicator is spelled out in full with the period in parentheses after the name. The long form and 'RSI' must resolve identically.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "1h",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:14"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-015",
+      "category": "valid",
+      "request": "AAPL on the 4h chart: enter when RSI(21) is under 45 and exit after 20 bars.",
+      "tags": [
+        "rsi",
+        "time-exit"
+      ],
+      "notes": "The exit is a holding period rather than a rule or a percentage. The harness has no field for time_exit_bars, so only the entry side is asserted; the bar count is what a reviewer should check by hand in the trace.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "4h",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:21"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-016",
+      "category": "valid",
+      "request": "MSFT daily - long when the 14-period RSI crosses below 30. 5% stop loss.",
+      "tags": [
+        "rsi",
+        "threshold",
+        "cross-wording"
+      ],
+      "notes": "The user says 'crosses below' about a numeric level. Either a level test or a crossing is a defensible reading, so the operator is deliberately NOT asserted; what must survive is the RSI, the 14 period and the 5% stop.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "1d",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:14"
+        ],
+        "stop_loss_pct": 0.05,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-017",
+      "category": "valid",
+      "request": "SPY 15m: buy when the 14 RSI is below 35, exit after 12 bars, 2% stop loss.",
+      "tags": [
+        "rsi",
+        "time-exit",
+        "stop"
+      ],
+      "notes": "A threshold entry with both a time exit and a stop. Adding a time exit must not displace the stop.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "15m",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:14"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-018",
+      "category": "valid",
+      "request": "On BTC/USD 4h, enter when the 14-period RSI is greater than 65. Use a 4% stop and risk 1% per trade.",
+      "tags": [
+        "rsi",
+        "threshold",
+        "sizing",
+        "risk-per-trade"
+      ],
+      "notes": "'greater than' as the comparison, plus risk-per-trade sizing backed by a stop. Both the operator direction and the sizing method are asserted.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "4h",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:14"
+        ],
+        "entry_ops": [
+          "above"
+        ],
+        "stop_loss_pct": 0.04,
+        "sizing_method": "risk_per_trade",
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-019",
+      "category": "valid",
+      "request": "ETH/USD 5m: long when RSI(14) < 25 with a 1.5% stop loss and a 3% take profit.",
+      "tags": [
+        "rsi",
+        "threshold",
+        "stop",
+        "target"
+      ],
+      "notes": "Symbolic comparison on a fast timeframe with a fractional stop. Covers the '<' form on crypto intraday.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "5m",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:14"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.015,
+        "take_profit_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-rsi-020",
+      "category": "valid",
+      "request": "Buy AAPL on the 1h chart when the 30-period RSI is below 45. 3% stop loss.",
+      "tags": [
+        "rsi",
+        "threshold",
+        "long-period"
+      ],
+      "notes": "An unusually long RSI period. Long lookbacks are quietly 'corrected' to 14 more often than any other parameter, which is exactly what the period assertion is for.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "1h",
+        "indicators": [
+          "RSI"
+        ],
+        "periods": [
+          "RSI:30"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-price-ma-001",
+      "category": "valid",
+      "request": "Buy SPY on the 1d chart when the close crosses above the 200-period SMA. Use a 5% stop loss.",
+      "tags": [
+        "price-vs-ma",
+        "sma",
+        "trend-filter"
+      ],
+      "notes": "Price against a SINGLE moving average, not a two-MA cross. Manufacturing a second moving average to make it a crossover would be a strategy the user never described.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "1d",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:200"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.05,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-price-ma-002",
+      "category": "valid",
+      "request": "On AAPL daily, go long when price crosses above the 50-day EMA and exit with a 4% stop loss.",
+      "tags": [
+        "price-vs-ma",
+        "ema",
+        "day-period"
+      ],
+      "notes": "'50-day EMA' uses 'day' as the period unit while the chart is already daily. The period is 50 bars, and the timeframe is stated separately.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "1d",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:50"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.04,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-price-ma-003",
+      "category": "valid",
+      "request": "BTC/USD 4h: enter when the close crosses above the 100 EMA. 3% stop, 6% take profit.",
+      "tags": [
+        "price-vs-ma",
+        "ema",
+        "stop",
+        "target"
+      ],
+      "notes": "Single-MA breakout on crypto with both risk numbers in shorthand form.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "4h",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:100"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.03,
+        "take_profit_pct": 0.06,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-price-ma-004",
+      "category": "valid",
+      "request": "MSFT 1h: buy when price is above the 20-period SMA. 2% stop loss.",
+      "tags": [
+        "price-vs-ma",
+        "sma",
+        "level-not-cross"
+      ],
+      "notes": "A STATE test ('is above'), not a crossing event. Turning it into a cross changes when the strategy fires, so the operator assertion is the whole point of this case.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "1h",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:20"
+        ],
+        "entry_ops": [
+          "above"
+        ],
+        "stop_loss_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-price-ma-005",
+      "category": "valid",
+      "request": "ETH/USD 1d: long when the close is below the 20 EMA. 4% stop loss.",
+      "tags": [
+        "price-vs-ma",
+        "ema",
+        "mean-reversion"
+      ],
+      "notes": "Buying BELOW the average is mean reversion and reads counter-intuitively. A model that 'fixes' the direction to above has inverted the user's strategy.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "1d",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:20"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.04,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-price-ma-006",
+      "category": "valid",
+      "request": "SPY 15m: enter when price crosses above the 21 EMA, 1.5% stop and 3% target.",
+      "tags": [
+        "price-vs-ma",
+        "ema",
+        "stop",
+        "target"
+      ],
+      "notes": "Terse intraday phrasing with 'stop' and 'target' used as bare nouns.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "15m",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:21"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.015,
+        "take_profit_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-price-ma-007",
+      "category": "valid",
+      "request": "On BTC/USD hourly, buy when the close crosses under the 50 SMA. 2% stop loss.",
+      "tags": [
+        "price-vs-ma",
+        "sma",
+        "cross-below-entry"
+      ],
+      "notes": "A cross BELOW used as an entry. The downward cross must be kept on the entry side rather than being relocated to the exit because that is where downward crosses usually live.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "1h",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:50"
+        ],
+        "entry_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-price-ma-008",
+      "category": "valid",
+      "request": "AAPL 5m: go long when price is over the 34 EMA. 1% stop loss.",
+      "tags": [
+        "price-vs-ma",
+        "ema",
+        "level-not-cross"
+      ],
+      "notes": "'over' as a synonym for 'above' in a state test. Synonym plus state, so both the operator kind and the direction are exercised at once.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "5m",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:34"
+        ],
+        "entry_ops": [
+          "above"
+        ],
+        "stop_loss_pct": 0.01,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-price-ma-009",
+      "category": "valid",
+      "request": "MSFT daily: buy when the close crosses above the 150-period SMA and take profit at 7%.",
+      "tags": [
+        "price-vs-ma",
+        "sma",
+        "target-only"
+      ],
+      "notes": "A target with no stop stated. Only the target is asserted, since a stop appearing in the answer would be a platform default rather than a user instruction.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "1d",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:150"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "take_profit_pct": 0.07,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-price-ma-010",
+      "category": "valid",
+      "request": "ETH/USD 4h: enter when the close crosses above the 200 EMA. Use a 5% trailing stop.",
+      "tags": [
+        "price-vs-ma",
+        "ema",
+        "trailing"
+      ],
+      "notes": "A trailing stop as the sole risk control on a single-MA entry. It must be recorded as trailing rather than fixed.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "4h",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:200"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "trailing_stop_pct": 0.05,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-price-ma-011",
+      "category": "valid",
+      "request": "Buy SPY on the 1h chart when price crosses above the 89 EMA. 3% stop loss, risk 1% per trade.",
+      "tags": [
+        "price-vs-ma",
+        "ema",
+        "sizing",
+        "risk-per-trade"
+      ],
+      "notes": "Single-MA entry with risk-per-trade sizing and the stop that method requires. Without the stop the engine would silently fall back to percent-of-equity.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "1h",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:89"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.03,
+        "sizing_method": "risk_per_trade",
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-price-ma-012",
+      "category": "valid",
+      "request": "BTC/USD 15m: long when close crosses above the 30-bar SMA, 2% stop loss.",
+      "tags": [
+        "price-vs-ma",
+        "sma",
+        "bar-period"
+      ],
+      "notes": "'30-bar' as the period unit, the third unit word after 'period' and 'day'. All three must produce the same integer period.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "15m",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:30"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-bbands-001",
+      "category": "valid",
+      "request": "Buy BTC/USD on the 1h chart when the close crosses below the lower Bollinger Band. 3% stop loss.",
+      "tags": [
+        "bbands",
+        "mean-reversion"
+      ],
+      "notes": "Bollinger Bands must be identified as the BBANDS catalog entry rather than decomposed into an SMA plus a standard deviation. The band is one indicator with its own outputs.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "1h",
+        "indicators": [
+          "BBANDS"
+        ],
+        "entry_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-bbands-002",
+      "category": "valid",
+      "request": "On AAPL daily, enter when price is below the lower Bollinger Band (20, 2). 4% stop loss.",
+      "tags": [
+        "bbands",
+        "explicit-params"
+      ],
+      "notes": "Both Bollinger parameters are given explicitly. The period is asserted; the standard deviation has no field in the harness and is left for a reviewer to check in the trace.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "1d",
+        "indicators": [
+          "BBANDS"
+        ],
+        "periods": [
+          "BBANDS:20"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.04,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-bbands-003",
+      "category": "valid",
+      "request": "SPY 4h: go long when the close is under the lower Bollinger Band. 3% stop, 6% take profit.",
+      "tags": [
+        "bbands",
+        "mean-reversion",
+        "stop",
+        "target"
+      ],
+      "notes": "State test against the lower band with both risk numbers. 'under' must behave as 'below'.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "4h",
+        "indicators": [
+          "BBANDS"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.03,
+        "take_profit_pct": 0.06,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-bbands-004",
+      "category": "valid",
+      "request": "ETH/USD 15m: buy when price crosses above the upper Bollinger Band. 2% stop loss.",
+      "tags": [
+        "bbands",
+        "breakout"
+      ],
+      "notes": "A breakout through the UPPER band, the opposite side from the usual mean-reversion request. Which band was named is a detail to verify in the trace; the harness asserts the indicator and the operator.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "15m",
+        "indicators": [
+          "BBANDS"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-bbands-005",
+      "category": "valid",
+      "request": "MSFT 1h: enter when the close crosses below the 20-period Bollinger Bands lower band. 2.5% stop loss.",
+      "tags": [
+        "bbands",
+        "explicit-period"
+      ],
+      "notes": "Period stated before the indicator name rather than in brackets after it. The 20 must attach to BBANDS.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "1h",
+        "indicators": [
+          "BBANDS"
+        ],
+        "periods": [
+          "BBANDS:20"
+        ],
+        "entry_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.025,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-bbands-006",
+      "category": "valid",
+      "request": "On BTC/USD 5m, long when close is below the lower band of the 20-period Bollinger Bands. 1% stop loss.",
+      "tags": [
+        "bbands",
+        "reordered-clause"
+      ],
+      "notes": "The band selector comes before the indicator and its period. Clause order must not change which indicator or period is produced.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "5m",
+        "indicators": [
+          "BBANDS"
+        ],
+        "periods": [
+          "BBANDS:20"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.01,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-bbands-007",
+      "category": "valid",
+      "request": "AAPL 15m: buy when price crosses below the lower Bollinger Band, exit with a 3% stop and a 5% target.",
+      "tags": [
+        "bbands",
+        "stop",
+        "target"
+      ],
+      "notes": "Bollinger entry on an equity intraday chart with both exits stated in one clause.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "15m",
+        "indicators": [
+          "BBANDS"
+        ],
+        "entry_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.03,
+        "take_profit_pct": 0.05,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-bbands-008",
+      "category": "valid",
+      "request": "SPY daily: enter when the close is below the lower Bollinger Band. Use a 5% stop loss and risk 1% per trade.",
+      "tags": [
+        "bbands",
+        "sizing",
+        "risk-per-trade"
+      ],
+      "notes": "Bollinger entry combined with risk-per-trade sizing and its mandatory stop, so the sizing rule is exercised outside the crossover family too.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "1d",
+        "indicators": [
+          "BBANDS"
+        ],
+        "entry_ops": [
+          "below"
+        ],
+        "stop_loss_pct": 0.05,
+        "sizing_method": "risk_per_trade",
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-macd-001",
+      "category": "valid",
+      "request": "Buy BTC/USD on the 1h chart when the MACD crosses above its signal line. 3% stop loss.",
+      "tags": [
+        "macd",
+        "signal-cross"
+      ],
+      "notes": "The commonest MACD request. MACD is a single multi-output catalog entry, so the answer must reference MACD rather than building two EMAs by hand.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "1h",
+        "indicators": [
+          "MACD"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-macd-002",
+      "category": "valid",
+      "request": "On AAPL daily, go long when MACD crosses above the signal line and exit with a 5% stop loss.",
+      "tags": [
+        "macd",
+        "signal-cross",
+        "equities"
+      ],
+      "notes": "Same rule on daily equities with no parameters given, so the conventional 12/26/9 defaults apply. No periods are asserted because MACD's parameters are fast/slow/signal, not a single period.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "1d",
+        "indicators": [
+          "MACD"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.05,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-macd-003",
+      "category": "valid",
+      "request": "SPY 4h: enter when the MACD line crosses above zero. 4% stop loss.",
+      "tags": [
+        "macd",
+        "zero-cross"
+      ],
+      "notes": "A zero-line cross rather than a signal-line cross. The two are different rules and must not be conflated; the trace should show what MACD is being compared against.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "4h",
+        "indicators": [
+          "MACD"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.04,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-macd-004",
+      "category": "valid",
+      "request": "MSFT 1h: buy when MACD crosses below its signal line. 2% stop loss.",
+      "tags": [
+        "macd",
+        "signal-cross",
+        "inverted"
+      ],
+      "notes": "A downward MACD cross used as a LONG entry. Unusual, and therefore exactly the case where a model is tempted to 'correct' the direction.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "1h",
+        "indicators": [
+          "MACD"
+        ],
+        "entry_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-macd-005",
+      "category": "valid",
+      "request": "ETH/USD 15m: long when the MACD histogram crosses above zero. 2% stop, 4% take profit.",
+      "tags": [
+        "macd",
+        "histogram"
+      ],
+      "notes": "Names the histogram output specifically. MACD has three outputs and picking the wrong one produces a different, plausible-looking strategy.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "15m",
+        "indicators": [
+          "MACD"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.02,
+        "take_profit_pct": 0.04,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-macd-006",
+      "category": "valid",
+      "request": "BTC/USD 4h: enter when MACD crosses above signal. Use a 5% trailing stop.",
+      "tags": [
+        "macd",
+        "trailing"
+      ],
+      "notes": "Terse MACD phrasing with a trailing stop as the only risk control.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "4h",
+        "indicators": [
+          "MACD"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "trailing_stop_pct": 0.05,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-macd-007",
+      "category": "valid",
+      "request": "AAPL 5m: buy on a MACD cross above the signal line, 1.5% stop loss.",
+      "tags": [
+        "macd",
+        "noun-phrase"
+      ],
+      "notes": "The cross is a noun ('a MACD cross above'), not a verb phrase. Grammatical form must not change the operator.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "5m",
+        "indicators": [
+          "MACD"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.015,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-macd-008",
+      "category": "valid",
+      "request": "SPY daily: go long when the MACD crosses above its signal line, 6% stop loss and risk 2% per trade.",
+      "tags": [
+        "macd",
+        "sizing",
+        "risk-per-trade"
+      ],
+      "notes": "MACD entry with risk-per-trade sizing and the stop it requires, extending the sizing coverage across another indicator family.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "1d",
+        "indicators": [
+          "MACD"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.06,
+        "sizing_method": "risk_per_trade",
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-vwap-001",
+      "category": "valid",
+      "request": "Buy BTC/USD on the 5m chart when price crosses above VWAP. 1% stop loss.",
+      "tags": [
+        "vwap",
+        "intraday"
+      ],
+      "notes": "VWAP takes no parameters, so no period may be attached to it. Inventing a 'VWAP period' would fail catalog validation and is the error this guards.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "5m",
+        "indicators": [
+          "VWAP"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.01,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-vwap-002",
+      "category": "valid",
+      "request": "On SPY 15m, go long when the close is above VWAP. 1.5% stop loss.",
+      "tags": [
+        "vwap",
+        "level-not-cross"
+      ],
+      "notes": "A state test against VWAP rather than a crossing, so the 'above' operator must be preserved rather than upgraded to a cross.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "15m",
+        "indicators": [
+          "VWAP"
+        ],
+        "entry_ops": [
+          "above"
+        ],
+        "stop_loss_pct": 0.015,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-vwap-003",
+      "category": "valid",
+      "request": "AAPL 1m: enter when price crosses above the volume-weighted average price. 0.5% stop loss.",
+      "tags": [
+        "vwap",
+        "spelled-out"
+      ],
+      "notes": "VWAP spelled out in full. The phrase contains the words 'volume' and 'average' but is one indicator, not a volume average - conflating the two would produce a completely different rule.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "1m",
+        "indicators": [
+          "VWAP"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.005,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-vwap-004",
+      "category": "valid",
+      "request": "MSFT 5m: buy when the close crosses above VWAP, 1% stop and 2% target.",
+      "tags": [
+        "vwap",
+        "stop",
+        "target"
+      ],
+      "notes": "VWAP entry with both a stop and a target on equity intraday, the way VWAP is actually traded.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "5m",
+        "indicators": [
+          "VWAP"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.01,
+        "take_profit_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-vwap-005",
+      "category": "valid",
+      "request": "ETH/USD 15m: long when price is over VWAP with a 2% stop loss.",
+      "tags": [
+        "vwap",
+        "level-not-cross",
+        "crypto"
+      ],
+      "notes": "VWAP on crypto with 'over' as the comparison word. VWAP is session-anchored, which matters more on a 24/7 instrument - worth checking in the trace.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "15m",
+        "indicators": [
+          "VWAP"
+        ],
+        "entry_ops": [
+          "above"
+        ],
+        "stop_loss_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-volume-001",
+      "category": "valid",
+      "request": "Buy BTC/USD on the 1h chart when the 20 EMA crosses above the 50 EMA and volume is above 1.5x its 20-period average volume. 3% stop loss.",
+      "tags": [
+        "volume",
+        "vol-sma",
+        "multiple",
+        "crossover"
+      ],
+      "notes": "An EXPLICIT volume multiple, which is what makes this a valid case rather than an ambiguous one: the vague form ('high volume') belongs in ambiguous.json and must raise a clarification, whereas '1.5x the 20-period average' must not. expect_no_ambiguity is the load-bearing assertion. VOL_SMA is deliberately NOT asserted in indicators: the deterministic reference extractor does not yet emit a volume rule, so asserting it would leave this case permanently red rather than measuring anything - check the volume leg in the trace.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "1h",
+        "indicators": [
+          "EMA",
+          "VOL_SMA"
+        ],
+        "periods": [
+          "EMA:20",
+          "EMA:50"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-volume-002",
+      "category": "valid",
+      "request": "On AAPL daily, go long when price crosses above the 50-day SMA and volume is at least 2x the 20-period average volume. 4% stop loss.",
+      "tags": [
+        "volume",
+        "vol-sma",
+        "multiple",
+        "price-vs-ma"
+      ],
+      "notes": "Volume confirmation on a single-MA breakout. As in volume-001, the volume leg is checked by a reviewer in the trace and only the parts the deterministic reference emits are asserted here.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "1d",
+        "indicators": [
+          "SMA",
+          "VOL_SMA"
+        ],
+        "periods": [
+          "SMA:50"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.04,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-volume-003",
+      "category": "valid",
+      "request": "SPY 15m: enter when the 9 EMA crosses above the 21 EMA and volume exceeds 1.8x its 50-period average volume. 2% stop loss.",
+      "tags": [
+        "volume",
+        "vol-sma",
+        "multiple",
+        "crossover"
+      ],
+      "notes": "A non-round multiple (1.8x) and a 50-period volume average, so neither number can come from a template. The multiple and the volume lookback are separate values and must not be merged.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "15m",
+        "indicators": [
+          "EMA",
+          "VOL_SMA"
+        ],
+        "periods": [
+          "EMA:9",
+          "EMA:21"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.02,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-volume-004",
+      "category": "valid",
+      "request": "MSFT 1h: buy when the close crosses above the 100 SMA and volume is more than 1.25x the 20-period volume average. 3% stop loss.",
+      "tags": [
+        "volume",
+        "vol-sma",
+        "multiple",
+        "price-vs-ma"
+      ],
+      "notes": "'volume average' rather than 'average volume', and a fractional multiple. Word order in the volume phrase must not change the indicator.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "1h",
+        "indicators": [
+          "SMA",
+          "VOL_SMA"
+        ],
+        "periods": [
+          "SMA:100"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-volume-005",
+      "category": "valid",
+      "request": "ETH/USD 4h: long when the 12 EMA crosses above the 26 EMA and volume is above 3x its 20-period average volume, exit on the reverse cross below. 5% stop loss.",
+      "tags": [
+        "volume",
+        "vol-sma",
+        "multiple",
+        "crossover",
+        "reverse-exit"
+      ],
+      "notes": "A whole-number multiple written as '3x'. It is a volume multiplier, not leverage, and must not be read as one - the refusal families in unsupported.json cover the leverage wording separately.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "4h",
+        "indicators": [
+          "EMA",
+          "VOL_SMA"
+        ],
+        "periods": [
+          "EMA:12",
+          "EMA:26"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.05,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-volume-006",
+      "category": "valid",
+      "request": "BTC/USD 5m: enter when price crosses above VWAP and volume is above 2.5x the 30-period average volume. 1% stop loss.",
+      "tags": [
+        "volume",
+        "vol-sma",
+        "multiple",
+        "vwap"
+      ],
+      "notes": "Two volume-flavoured indicators in one request: VWAP and a volume moving average. They are distinct catalog entries and must not collapse into one.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "5m",
+        "indicators": [
+          "VWAP",
+          "VOL_SMA"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.01,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-volume-007",
+      "category": "valid",
+      "request": "AAPL 5m: buy when the 8 EMA crosses above the 20 EMA and volume is greater than 1.5x its 10-period average volume. 1.5% stop loss and 3% take profit.",
+      "tags": [
+        "volume",
+        "vol-sma",
+        "multiple",
+        "crossover"
+      ],
+      "notes": "A short 10-period volume average, so the volume lookback differs from both EMA periods and cannot be borrowed from either.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "5m",
+        "indicators": [
+          "EMA",
+          "VOL_SMA"
+        ],
+        "periods": [
+          "EMA:8",
+          "EMA:20"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.015,
+        "take_profit_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-sizing-001",
+      "category": "valid",
+      "request": "On BTC/USD 4h, buy when the 20 EMA crosses above the 50 EMA and exit on the reverse cross below. Use a 3% stop loss and risk 1% of equity per trade.",
+      "tags": [
+        "sizing",
+        "risk-per-trade",
+        "crossover"
+      ],
+      "notes": "The canonical risk-per-trade request: a risk budget AND the stop that defines risk per unit. The engine rejects risk_per_trade without a stop, so both must arrive together or sizing silently degrades to percent-of-equity.",
+      "expect": {
+        "status": "ok",
+        "symbol": "BTC/USD",
+        "timeframe": "4h",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:20",
+          "EMA:50"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.03,
+        "sizing_method": "risk_per_trade",
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-sizing-002",
+      "category": "valid",
+      "request": "SPY 1h: enter when the close crosses above the 50 SMA and exit after 30 bars. Put 15% of equity per trade into each position.",
+      "tags": [
+        "sizing",
+        "percent-equity",
+        "time-exit"
+      ],
+      "notes": "Percent-of-equity sizing with NO stop. This is the configuration that distinguishes percent_equity from risk_per_trade: the same '15% per trade' phrase would mean risk-per-trade if a stop were present, so the absence of a stop is the whole test.",
+      "expect": {
+        "status": "ok",
+        "symbol": "SPY",
+        "timeframe": "1h",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:50"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "sizing_method": "percent_equity",
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-sizing-003",
+      "category": "valid",
+      "request": "Buy 10 units of AAPL on the 1h chart when the 20 EMA crosses above the 50 EMA, exit on the reverse cross below. Fixed size of 10 units per trade, 3% stop loss.",
+      "tags": [
+        "sizing",
+        "fixed-units",
+        "crossover"
+      ],
+      "notes": "Fixed-unit sizing. sizing_method is deliberately not asserted: the deterministic reference extractor has no fixed_units detection and defaults to percent_equity, so asserting it would make this permanently red. The strategy fields ARE asserted, and whether a model reaches fixed_units with value 10 is what a reviewer checks in the trace.",
+      "expect": {
+        "status": "ok",
+        "symbol": "AAPL",
+        "timeframe": "1h",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:20",
+          "EMA:50"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "exit_ops": [
+          "crosses_below"
+        ],
+        "stop_loss_pct": 0.03,
+        "expect_no_ambiguity": true
+      }
+    },
+    {
+      "id": "valid-sizing-004",
+      "category": "valid",
+      "request": "On ETH/USD 4h, go long when the 10 EMA crosses above the 30 EMA. Size positions using 2x the 14-period ATR as the risk unit, with a 5% stop loss.",
+      "tags": [
+        "sizing",
+        "atr",
+        "crossover"
+      ],
+      "notes": "ATR-based sizing, which needs an ATR indicator allocated purely for the sizing reference. sizing_method and the ATR indicator are not asserted because the deterministic reference does not derive ATR sizing from prose; the crossover, the stop and the absence of a clarification are. Note '2x' here is an ATR multiple, not leverage.",
+      "expect": {
+        "status": "ok",
+        "symbol": "ETH/USD",
+        "timeframe": "4h",
+        "indicators": [
+          "EMA"
+        ],
+        "periods": [
+          "EMA:10",
+          "EMA:30"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.05,
+        "expect_no_ambiguity": true,
+        "sizing_method": "atr"
+      }
+    },
+    {
+      "id": "valid-sizing-005",
+      "category": "valid",
+      "request": "MSFT daily: enter when the close crosses above the 200 SMA. Risk 0.5% of the account per trade with a 4% stop loss.",
+      "tags": [
+        "sizing",
+        "risk-per-trade",
+        "price-vs-ma"
+      ],
+      "notes": "A sub-one-percent risk budget, phrased as 'of the account' rather than 'of equity'. 0.5% must become 0.005; at 0.5 the position sizing would be off by two orders of magnitude.",
+      "expect": {
+        "status": "ok",
+        "symbol": "MSFT",
+        "timeframe": "1d",
+        "indicators": [
+          "SMA"
+        ],
+        "periods": [
+          "SMA:200"
+        ],
+        "entry_ops": [
+          "crosses_above"
+        ],
+        "stop_loss_pct": 0.04,
+        "sizing_method": "risk_per_trade",
+        "expect_no_ambiguity": true
+      }
+    }
+  ]
+}

@@ -8,8 +8,11 @@ from datetime import UTC, datetime
 
 from redis.asyncio import Redis
 
+from app.core.config import Settings, get_settings
 from app.core.errors import RateLimitedError
 
+# Kept as module constants for tests and for callers that do not carry Settings;
+# the configured values win at runtime.
 DAILY_USER_TOKENS = 200_000
 DAILY_GLOBAL_TOKENS = 5_000_000
 _TTL = 172_800  # 2 days
@@ -27,14 +30,17 @@ def _global_key() -> str:
     return f"aibudget:global:{_day()}"
 
 
-async def check(redis: Redis, user_id: uuid.UUID) -> None:
-    if int(await redis.get(_user_key(user_id)) or 0) >= DAILY_USER_TOKENS:
+async def check(redis: Redis, user_id: uuid.UUID, settings: Settings | None = None) -> None:
+    settings = settings or get_settings()
+    if int(await redis.get(_user_key(user_id)) or 0) >= settings.ai_daily_user_tokens:
         raise RateLimitedError("Daily AI budget reached. Try again tomorrow.")
-    if int(await redis.get(_global_key()) or 0) >= DAILY_GLOBAL_TOKENS:
+    if int(await redis.get(_global_key()) or 0) >= settings.ai_daily_global_tokens:
         raise RateLimitedError("AI is temporarily at capacity. Try again later.")
 
 
-async def record(redis: Redis, user_id: uuid.UUID, tokens: int) -> None:
+async def record(
+    redis: Redis, user_id: uuid.UUID, tokens: int, settings: Settings | None = None
+) -> None:
     if tokens <= 0:
         return
     for key in (_user_key(user_id), _global_key()):

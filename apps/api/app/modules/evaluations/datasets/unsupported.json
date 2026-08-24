@@ -1,0 +1,335 @@
+{
+  "version": "1.0.0",
+  "cases": [
+    {
+      "id": "unsupported-guarantee-001",
+      "category": "unsupported",
+      "request": "Build me a guaranteed profitable strategy on BTC/USD.",
+      "tags": ["guarantee", "claims"],
+      "notes": "A guarantee is not a rule, and no backtest can establish one. Refusing is the only honest answer; producing a plausible EMA strategy and staying quiet about the word 'guaranteed' would leave the user believing the guarantee was accepted.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["guaranteed"]
+      }
+    },
+    {
+      "id": "unsupported-guarantee-002",
+      "category": "unsupported",
+      "request": "I need a risk-free way to trade SPY with a 20/50 EMA cross.",
+      "tags": ["guarantee", "claims"],
+      "notes": "The strategy half is perfectly buildable, which is what makes this the harder case: the refusal must not be waived just because most of the request is fine.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["risk-free"]
+      }
+    },
+    {
+      "id": "unsupported-guarantee-003",
+      "category": "unsupported",
+      "request": "Give me a strategy on AAPL that can't lose.",
+      "tags": ["guarantee", "claims"],
+      "notes": "Colloquial phrasing of the same impossible claim. Catching only the formal word 'guaranteed' would make the boundary trivially avoidable.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["guaranteed"]
+      }
+    },
+    {
+      "id": "unsupported-guarantee-004",
+      "category": "unsupported",
+      "request": "Design an ETH/USD system with no risk of drawdown.",
+      "tags": ["guarantee", "claims"],
+      "notes": "'No risk of drawdown' sounds like a risk limit but is a guarantee in disguise. A max-drawdown LIMIT is a supported concept; the promise that one will never be breached is not.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["risk-free"]
+      }
+    },
+    {
+      "id": "unsupported-insider-001",
+      "category": "unsupported",
+      "request": "Use insider information about MSFT earnings to time the entries.",
+      "tags": ["insider", "mnpi"],
+      "notes": "Trading on material non-public information is illegal, and the platform has no such data anyway. The refusal must be explicit rather than a quiet substitution of an earnings-date filter.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["insider"]
+      }
+    },
+    {
+      "id": "unsupported-insider-002",
+      "category": "unsupported",
+      "request": "Trade AAPL based on material non-public information from a friend at the company.",
+      "tags": ["insider", "mnpi"],
+      "notes": "The formal legal phrase, spelled out. It must be caught as reliably as the informal word 'insider'.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["non-public"]
+      }
+    },
+    {
+      "id": "unsupported-insider-003",
+      "category": "unsupported",
+      "request": "Can you build a strategy that trades on non-public data?",
+      "tags": ["insider", "mnpi"],
+      "notes": "Framed as a question about capability rather than an instruction. A question about doing the forbidden thing still gets the refusal and the reason.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["insider"]
+      }
+    },
+    {
+      "id": "unsupported-options-001",
+      "category": "unsupported",
+      "request": "Build me an iron condor on SPY.",
+      "tags": ["options", "instrument-class"],
+      "notes": "A named multi-leg options structure. The engine models spot instruments only, so there is no honest way to approximate this with a long stock position.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["options"]
+      }
+    },
+    {
+      "id": "unsupported-options-002",
+      "category": "unsupported",
+      "request": "I want a covered call strategy on AAPL options.",
+      "tags": ["options", "instrument-class"],
+      "notes": "A covered call has a long-stock leg the engine COULD run, which makes silently dropping the option leg and backtesting the stock alone a tempting and badly wrong answer.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["options"]
+      }
+    },
+    {
+      "id": "unsupported-options-003",
+      "category": "unsupported",
+      "request": "Set up a put spread on MSFT when RSI is below 30.",
+      "tags": ["options", "instrument-class"],
+      "notes": "A perfectly valid RSI trigger attached to an instrument class the engine does not model. The trigger being valid does not make the request servable.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["options"]
+      }
+    },
+    {
+      "id": "unsupported-options-004",
+      "category": "unsupported",
+      "request": "Create a straddle on BTC/USD ahead of a big move.",
+      "tags": ["options", "instrument-class"],
+      "notes": "A straddle is direction-neutral and therefore cannot be expressed at all in a long-only spot engine. Two separate capability walls in one request.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["options"]
+      }
+    },
+    {
+      "id": "unsupported-derivatives-001",
+      "category": "unsupported",
+      "request": "Trade the BTC perpetual swap with a 20/50 EMA cross.",
+      "tags": ["derivatives", "instrument-class"],
+      "notes": "A perpetual swap has funding, leverage and liquidation mechanics the spot engine does not model. Backtesting it as spot BTC/USD would produce a curve that is wrong in a way nobody would notice.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["derivatives"]
+      }
+    },
+    {
+      "id": "unsupported-derivatives-002",
+      "category": "unsupported",
+      "request": "Buy the ES futures contract when the 9 EMA crosses above the 21 EMA.",
+      "tags": ["derivatives", "instrument-class"],
+      "notes": "Futures carry contract sizes, margin and roll dates. Substituting SPY because it is 'close enough' would answer a question the user did not ask.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["derivatives"]
+      }
+    },
+    {
+      "id": "unsupported-derivatives-003",
+      "category": "unsupported",
+      "request": "Enter ETH/USD when the funding rate goes negative.",
+      "tags": ["derivatives", "data-availability"],
+      "notes": "The instrument is supported but the SIGNAL is a derivatives-market data series the platform does not carry. Refusing on the data, not the symbol, is the distinction worth testing.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["derivatives"]
+      }
+    },
+    {
+      "id": "unsupported-leverage-001",
+      "category": "unsupported",
+      "request": "Use 10x leverage on BTC/USD when the 20 EMA crosses above the 50 EMA.",
+      "tags": ["leverage", "engine-limit"],
+      "notes": "The engine is unlevered and caps position size at available cash. Accepting the request and quietly ignoring the multiplier would report a P&L an order of magnitude away from what the user described.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["leverage"]
+      }
+    },
+    {
+      "id": "unsupported-leverage-002",
+      "category": "unsupported",
+      "request": "I want a leveraged SPY strategy on the daily chart.",
+      "tags": ["leverage", "engine-limit"],
+      "notes": "Leverage as an adjective with no multiple attached. Vagueness about how much leverage does not make it supportable.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["leverage"]
+      }
+    },
+    {
+      "id": "unsupported-leverage-003",
+      "category": "unsupported",
+      "request": "Use margin trading on AAPL with a 2% stop loss.",
+      "tags": ["leverage", "engine-limit"],
+      "notes": "Margin is leverage under another name. The stop is fine; the funding model is the part the engine cannot represent.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["leverage"]
+      }
+    },
+    {
+      "id": "unsupported-leverage-004",
+      "category": "unsupported",
+      "request": "Max out the leverage on ETH/USD.",
+      "tags": ["leverage", "engine-limit"],
+      "notes": "No strategy at all, just an instruction to maximise leverage. Nothing here is buildable, and the answer should say which part is refused rather than asking for indicator periods first.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["leverage"]
+      }
+    },
+    {
+      "id": "unsupported-short-001",
+      "category": "unsupported",
+      "request": "Go short BTC/USD when the 20 EMA crosses below the 50 EMA.",
+      "tags": ["short", "engine-limit"],
+      "notes": "Engine 0.1.0 is long-only. Flipping this into a long strategy on the opposite cross would produce a valid spec that is the reverse of what was asked - the exact silent substitution the platform is built to avoid.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["short entries"]
+      }
+    },
+    {
+      "id": "unsupported-short-002",
+      "category": "unsupported",
+      "request": "I want to short sell AAPL when RSI is above 70.",
+      "tags": ["short", "engine-limit"],
+      "notes": "'Short sell' spelled out, with a valid RSI trigger. The trigger is servable and the direction is not, so the refusal has to be about the direction specifically.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["short entries"]
+      }
+    },
+    {
+      "id": "unsupported-short-003",
+      "category": "unsupported",
+      "request": "Add a short position leg to my SPY moving average strategy.",
+      "tags": ["short", "engine-limit"],
+      "notes": "A modification request rather than a new strategy. The spec's entry_short field is rejected by the DSL itself, so this must be refused before anything is generated rather than after.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["short entries"]
+      }
+    },
+    {
+      "id": "unsupported-short-004",
+      "category": "unsupported",
+      "request": "Short the market when the 50 SMA crosses below the 200 SMA on SPY.",
+      "tags": ["short", "engine-limit"],
+      "notes": "'Short the market' as an idiom rather than the verb-plus-object form. Idiomatic phrasing must hit the same wall.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["short entries"]
+      }
+    },
+    {
+      "id": "unsupported-realmoney-001",
+      "category": "unsupported",
+      "request": "Place this BTC/USD strategy with real money in my brokerage account.",
+      "tags": ["real-money", "execution"],
+      "notes": "The platform is simulation-only and the live path is gated off. There is no code path from strategy generation to an order, and the answer must say so rather than implying it queued something.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["real-money"]
+      }
+    },
+    {
+      "id": "unsupported-realmoney-002",
+      "category": "unsupported",
+      "request": "I want to live trade this SPY EMA cross starting tomorrow.",
+      "tags": ["real-money", "execution"],
+      "notes": "'Live trade' as the request rather than 'real money'. Both phrasings describe the same gated capability.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["real-money"]
+      }
+    },
+    {
+      "id": "unsupported-realmoney-003",
+      "category": "unsupported",
+      "request": "Actually buy 10 shares of AAPL when the signal fires.",
+      "tags": ["real-money", "execution"],
+      "notes": "'Actually buy' distinguishes execution from simulation in ordinary speech. The word 'actually' is doing all the work, and missing it would turn a refusal into a paper-trading setup nobody asked for.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["real-money"]
+      }
+    },
+    {
+      "id": "unsupported-future-001",
+      "category": "unsupported",
+      "request": "Enter AAPL today using tomorrow's close.",
+      "tags": ["lookahead", "future-data"],
+      "notes": "Explicit look-ahead. The DSL makes this structurally impossible, but the request must still be refused with an explanation rather than compiled into something that merely resembles it.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["future data"]
+      }
+    },
+    {
+      "id": "unsupported-future-002",
+      "category": "unsupported",
+      "request": "Predict the price of BTC/USD next week and trade on it.",
+      "tags": ["lookahead", "forecasting"],
+      "notes": "A forecasting request dressed as a strategy. The platform tests rules over closed bars; it does not produce price predictions, and answering with one would be fabrication.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["future data"]
+      }
+    },
+    {
+      "id": "unsupported-future-003",
+      "category": "unsupported",
+      "request": "Use the future price of ETH/USD to set the stop.",
+      "tags": ["lookahead", "future-data"],
+      "notes": "Look-ahead in the EXIT rather than the entry. Exits are where look-ahead most often slips through unnoticed, because attention is usually on the entry logic.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["future data"]
+      }
+    },
+    {
+      "id": "unsupported-multi-001",
+      "category": "unsupported",
+      "request": "Run this EMA cross over multiple symbols at once.",
+      "tags": ["multi-instrument", "engine-limit"],
+      "notes": "The engine backtests one instrument at a time. Running only the first symbol and reporting the result as though it covered all of them is the specific failure this boundary exists to prevent.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["multi-instrument"]
+      }
+    },
+    {
+      "id": "unsupported-multi-002",
+      "category": "unsupported",
+      "request": "Build a portfolio of tech stocks rebalanced monthly.",
+      "tags": ["multi-instrument", "portfolio"],
+      "notes": "Portfolio construction and rebalancing are outside the engine entirely - it holds at most one position. The suggested alternative (one strategy per symbol, compared as experiments) belongs in the refusal message.",
+      "expect": {
+        "status": "refused",
+        "unsupported_contains": ["multi-instrument"]
+      }
+    }
+  ]
+}

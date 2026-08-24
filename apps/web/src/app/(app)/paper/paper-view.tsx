@@ -4,7 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { PlayCircle } from "lucide-react";
 import Link from "next/link";
 
+import { DataBadge } from "@/components/data-badge";
 import { HypotheticalBanner } from "@/components/hypothetical-banner";
+import { QueryError } from "@/components/query-error";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api/client";
@@ -17,7 +19,13 @@ type Snapshot = {
 } | null;
 
 export function PaperView() {
-  const { data: sessions, isLoading } = useQuery({
+  const {
+    data: sessions,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["paper-sessions"],
     queryFn: () => api.paperSessions(),
   });
@@ -25,10 +33,13 @@ export function PaperView() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Paper Trading</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-semibold">Paper Trading</h1>
+          <DataBadge kind="PAPER" title="Simulated ledger — no real orders, no real money." />
+        </div>
         <p className="text-sm text-muted-foreground">
-          Deployed strategies running against live data on a virtual ledger.{" "}
-          <span className="rounded bg-muted px-1.5 py-0.5 text-xs uppercase">Paper</span>
+          Deployed strategies simulated against delayed bars on a virtual ledger. Every figure
+          below is simulated; no order reaches a market.
         </p>
       </div>
 
@@ -40,11 +51,18 @@ export function PaperView() {
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
         </div>
+      ) : isError ? (
+        /* A failed fetch is not "you have no sessions" — say which one it is. */
+        <QueryError
+          title="Couldn't load paper sessions"
+          error={error}
+          onRetry={() => void refetch()}
+        />
       ) : !sessions?.length ? (
         <EmptyState
           icon={PlayCircle}
           title="No paper sessions yet"
-          description="Deploy a strategy to trade live data on a virtual ledger."
+          description="Deploy a strategy to simulate it against delayed bars on a virtual ledger."
           action={
             <Link href="/strategies" className="text-sm text-primary hover:underline">
               Go to strategies →
@@ -58,7 +76,7 @@ export function PaperView() {
               <tr>
                 <th className="px-4 py-2 font-medium">Symbol</th>
                 <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 text-right font-medium">Equity</th>
+                <th className="px-4 py-2 text-right font-medium">Simulated equity</th>
                 <th className="px-4 py-2 text-right font-medium">Return</th>
                 <th className="px-4 py-2 text-right font-medium">Trades</th>
               </tr>
@@ -78,6 +96,8 @@ export function PaperView() {
                       </span>
                     </td>
                     <td className="px-4 py-2 text-right tabular-nums">
+                      {/* Display-only formatting of a server-computed Decimal string — the
+                          value is never arithmetic'd here (invariant #2). */}
                       {snap?.final_equity
                         ? `$${Number(snap.final_equity).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
                         : "—"}

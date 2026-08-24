@@ -116,11 +116,30 @@ sed -i "s|^BROKER_CRED_KEY=.*|BROKER_CRED_KEY=$CRED_KEY|" infra/.env.prod
 sed -i "s|CHANGE_ME|$PG_PW|g" infra/.env.prod
 nano infra/.env.prod
 ```
-In `nano`, set these three (then Ctrl+O, Enter, Ctrl+X):
+The three `python3 -c` commands above generate **your own** secrets. Never paste a
+`BROKER_CRED_KEY` (or `APP_SECRET_KEY`) copied from a document or a chat: it is the
+key that encrypts broker API credentials at rest, so a shared key means anyone else
+holding it can decrypt yours.
+
+In `nano`, set these (then Ctrl+O, Enter, Ctrl+X):
 ```
 DOMAIN=mubintrade.duckdns.org
 CORS_ALLOW_ORIGINS=https://mubintrade.duckdns.org
+FRONTEND_URL=https://mubintrade.duckdns.org   # password-reset links are built from this
 GEMINI_API_KEY=<your FRESH Gemini key>     # rotate the one shared in chat
+
+# Caddy terminates TLS, so without these every user shares ONE rate-limit bucket
+# (the proxy's) and audit rows record the proxy's IP instead of the client's.
+TRUST_PROXY_HEADERS=true
+TRUSTED_PROXY_HOPS=1
+
+# Password reset sends nothing unless SMTP is configured — the link is written to the
+# log instead. Use a Gmail App Password (Account -> Security -> 2-Step -> App passwords).
+SMTP_USER=<your gmail address>
+SMTP_PASSWORD=<16-char app password>
+
+# Bearer token for /metrics; empty means /metrics is 404 and Prometheus scrapes nothing.
+METRICS_TOKEN=<python3 -c "import secrets;print(secrets.token_urlsafe(32))">
 ```
 Leave `LIVE_TRADING_ENABLED=false`.
 
@@ -147,8 +166,14 @@ $C run --rm api python -m app.cli.backfill ETH/USD --days 2
 ```bash
 curl -s https://mubintrade.duckdns.org/api/health    # -> {"status":"ok"}
 curl -s https://mubintrade.duckdns.org/api/ready      # -> db + redis healthy
+
+# Config check: this must print NOTHING. Each line it does print is a production
+# setting that silently breaks a user-facing flow (reset links, email, metrics, cookies).
+docker compose -f infra/compose.prod.yaml --env-file infra/.env.prod logs api   | grep insecure_production_config
 ```
 Open **https://mubintrade.duckdns.org** in your browser → register an account → dashboard.
+Then actually walk the reset flow once (log out → "forgot password") — an unconfigured
+`SMTP_*` or `FRONTEND_URL` looks completely healthy from every other angle.
 
 ---
 

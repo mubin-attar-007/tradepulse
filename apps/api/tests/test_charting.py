@@ -11,6 +11,7 @@ from httpx import AsyncClient
 from app.core.db import get_sessionmaker
 from app.modules.market_data import repository as repo
 from app.modules.market_data.providers.base import CanonicalBar
+from tests.conftest import authenticate
 
 BASE = datetime(2024, 1, 2, 15, 0, tzinfo=UTC)
 
@@ -39,9 +40,7 @@ async def _seed() -> uuid.UUID:
 
 
 async def _login(client: AsyncClient) -> None:
-    await client.post(
-        "/auth/register", json={"email": "trader@example.com", "password": "password123"}
-    )
+    await authenticate(client, "trader@example.com")
 
 
 async def test_instruments_requires_auth(client: AsyncClient) -> None:

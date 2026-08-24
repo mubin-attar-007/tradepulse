@@ -77,13 +77,11 @@ class PaperService:
             self.session, instrument.id, timeframe=spec.timeframe, start=start, end=end
         )
         if len(bars) >= 2:
+            config = ExecutionConfig(initial_cash=Decimal(paper.initial_cash))
             result = engine.run(
-                spec,
-                bars,
-                ExecutionConfig(initial_cash=Decimal(paper.initial_cash)),
-                close_at_end=False,
+                spec, bars, config, close_at_end=False, calendar=instrument.calendar
             )
-            snapshot = result_to_dict(result, as_of=end)
+            snapshot = result_to_dict(result, as_of=end, config=config)
             paper.snapshot = snapshot
             paper.last_run_at = end
             # Idempotent snapshot-diff: persist an Alert + email for each NEW fill /

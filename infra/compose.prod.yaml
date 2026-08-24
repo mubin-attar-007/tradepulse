@@ -5,7 +5,7 @@ name: trading-platform
 
 services:
   db:
-    image: timescale/timescaledb:2.17.2-pg16
+    image: timescale/timescaledb:2.18.2-pg16
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -50,12 +50,22 @@ services:
       redis: { condition: service_healthy }
 
   web:
-    build: { context: ../apps/web, dockerfile: ../../infra/Dockerfile.web }
+    # NEXT_PUBLIC_* must be BUILD args: Next.js inlines them into the client bundle
+    # at build time, so setting them as runtime environment has no effect on what
+    # the browser receives. NEXT_PUBLIC_SITE_URL is required for the site to be
+    # indexable at all — without it the app emits noindex and an empty sitemap
+    # rather than asserting a domain it cannot verify.
+    build:
+      context: ../apps/web
+      dockerfile: ../../infra/Dockerfile.web
+      args:
+        NEXT_PUBLIC_API_BASE: /api
+        NEXT_PUBLIC_WS_URL: wss://${DOMAIN}/api/market/ws
+        NEXT_PUBLIC_SITE_URL: https://${DOMAIN}
     image: trading-platform-web:latest
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_BASE: /api
-      NEXT_PUBLIC_WS_URL: wss://${DOMAIN}/api/market/ws
+      # Server-side only (the Next proxy route), so runtime env is correct here.
       API_PROXY_TARGET: http://api:8000
 
   caddy:
@@ -77,6 +87,10 @@ services:
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=15d"]
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # /metrics is bearer-gated and returns 404 without a token, so the scrape
+      # config reads one from this file. Create it with the same value as
+      # METRICS_TOKEN in .env.prod:  printf '%s' "$METRICS_TOKEN" > infra/secrets/metrics_token
+      - ./secrets/metrics_token:/etc/prometheus/metrics_token:ro
       - prometheus_data:/prometheus
 
   loki:

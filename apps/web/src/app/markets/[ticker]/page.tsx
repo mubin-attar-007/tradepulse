@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { FaqJsonLd } from "@/components/faq-jsonld";
 import { api, ApiError, type PublicMarket } from "@/lib/api/client";
-import { BRAND_NAME, SITE_URL } from "@/lib/brand";
+import { absoluteUrl, BRAND_NAME, SITE_URL } from "@/lib/brand";
 import { tickerFaq } from "@/lib/markets/faq";
 import { symbolToSlug } from "@/lib/markets/slug";
 
@@ -50,11 +50,14 @@ export async function generateMetadata({
   const { instrument } = market;
   const displayName = instrument.name ?? instrument.ticker;
   const assetLabel = instrument.asset_class === "crypto" ? "crypto" : "stock";
-  const title = `${instrument.ticker} — ${displayName} chart, indicators & backtest`;
+  const title = `${instrument.ticker} — ${displayName} chart, indicators & reference simulation`;
+  // "Live chart" alongside "delayed price" in one sentence was self-contradicting: the
+  // public chart has no live feed at all (see components/public-chart.tsx).
   const description =
-    `Delayed ${instrument.ticker} (${displayName}) ${assetLabel} price with a live candlestick ` +
-    `chart, real SMA/EMA/RSI indicators, and a hypothetical reference backtest — computed the same ` +
-    `way ${BRAND_NAME} computes every number. Not investment advice.`;
+    `Delayed ${instrument.ticker} (${displayName}) ${assetLabel} price with an interactive ` +
+    `candlestick chart, causally computed SMA/EMA/RSI indicators, and a hypothetical reference ` +
+    `strategy simulation — computed the same way ${BRAND_NAME} computes every number. ` +
+    `Research illustration, not investment advice.`;
   // Canonical is the ticker page itself (never the homepage).
   const canonicalPath = `/markets/${symbolToSlug(instrument.ticker)}`;
 
@@ -66,7 +69,8 @@ export async function generateMetadata({
       type: "website",
       title: `${title} · ${BRAND_NAME}`,
       description,
-      url: `${SITE_URL}${canonicalPath}`,
+      // Omitted rather than guessed when the deploy origin is unconfigured (lib/brand.ts).
+      ...(SITE_URL ? { url: absoluteUrl(canonicalPath) } : {}),
     },
     twitter: { card: "summary_large_image", title, description },
   };
@@ -89,12 +93,18 @@ export default async function MarketPage({ params }: { params: Promise<Params> }
     "@type": "FinancialProduct",
     name: `${displayName} (${instrument.ticker})`,
     category: instrument.asset_class,
-    url: `${SITE_URL}/markets/${slug}`,
+    // URL fields are dropped entirely when the origin is unknown — structured data that
+    // names the wrong host is worse than structured data that stays quiet.
+    ...(SITE_URL ? { url: absoluteUrl(`/markets/${slug}`) } : {}),
     description:
-      `Delayed ${instrument.ticker} price, real technical indicators (SMA/EMA/RSI), and a ` +
-      `hypothetical reference backtest on ${BRAND_NAME}. For research and education; not ` +
-      `investment advice.`,
-    provider: { "@type": "Organization", name: BRAND_NAME, url: SITE_URL },
+      `Delayed ${instrument.ticker} price, causally computed technical indicators (SMA/EMA/RSI), ` +
+      `and a hypothetical fixed-reference-strategy simulation on ${BRAND_NAME}. A research ` +
+      `illustration for education; not a trading signal and not investment advice.`,
+    provider: {
+      "@type": "Organization",
+      name: BRAND_NAME,
+      ...(SITE_URL ? { url: SITE_URL } : {}),
+    },
   };
 
   return (

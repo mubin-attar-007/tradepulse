@@ -1,15 +1,27 @@
-"""Auth HTTP endpoints: csrf, register, login, logout, me."""
+"""Auth HTTP endpoints: csrf, register, login, logout, me.
+
+CSRF is not wired per-route here: it is enforced inside ``get_current_user`` for
+every cookie-authenticated request (see ``auth/deps.py``). The endpoints below
+that take no session — register, login, and both halves of password reset — are
+therefore the ones that must carry their own abuse controls, which is what the
+per-IP *and* per-account budgets are for.
+"""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Response
 from starlette.requests import Request
 
 from app.core.config import get_settings
 from app.core.deps import RedisDep, SessionDep
 from app.core.email import send_email
 from app.core.errors import AuthenticationError
-from app.core.ratelimit import enforce_rate_limit
+from app.core.ratelimit import (
+    account_bucket,
+    clear_rate_limit,
+    client_ip,
+    enforce_rate_limit,
+)
 from app.core.security import (
     clear_session_cookie,
     generate_csrf_token,
@@ -18,7 +30,7 @@ from app.core.security import (
     set_session_cookie,
 )
 from app.modules.audit import service as audit
-from app.modules.auth.deps import CurrentUser, csrf_protect
+from app.modules.auth.deps import CurrentUser
 from app.modules.auth.reset import consume_reset_token, create_reset_token
 from app.modules.auth.schemas import (
     ChangePasswordRequest,
@@ -30,13 +42,9 @@ from app.modules.auth.schemas import (
     UserOut,
 )
 from app.modules.auth.service import AuthService
-from app.modules.auth.sessions import create_session, revoke_session
+from app.modules.auth.sessions import create_session, revoke_session, revoke_user_sessions
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
 
 
 @router.get("/csrf", summary="Issue a CSRF token (sets cookie + returns token)")
@@ -54,6 +62,9 @@ async def register(
     session: SessionDep,
     redis: RedisDep,
 ) -> UserOut:
+    # Register was the only credential endpoint with no budget, and it answers 409
+    # on a taken address — i.e. a free, unlimited account-existence oracle.
+    await enforce_rate_limit(redis, f"register:{client_ip(request)}", limit=20, window=3600)
     user = await AuthService(session).register(
         payload.email, payload.password, payload.display_name
     )
@@ -63,7 +74,7 @@ async def register(
         actor_id=user.id,
         entity_type="user",
         entity_id=str(user.id),
-        ip=_client_ip(request),
+        ip=client_ip(request),
     )
     set_session_cookie(response, await create_session(redis, user.id))
     set_csrf_cookie(response, generate_csrf_token())
@@ -78,22 +89,34 @@ async def login(
     session: SessionDep,
     redis: RedisDep,
 ) -> UserOut:
-    await enforce_rate_limit(redis, f"login:{_client_ip(request)}", limit=10, window=60)
+    # Two budgets, because either alone has a hole: per-IP is one shared bucket for
+    # everyone behind a proxy (any visitor could lock out the whole platform), and
+    # per-account alone lets a botnet spread a guessing attack across addresses.
+    #
+    # The per-account budget counts FAILURES ONLY. Charging successful logins to it
+    # turns the control into an account-lockout weapon: anyone who knows an address
+    # could spend its budget from any IP, with no credentials, and hold the real
+    # owner out indefinitely. Clearing the counter on success keeps the budget
+    # pointed at guessing, which is the thing it exists to stop.
+    account_key = account_bucket("login", payload.email)
+    await enforce_rate_limit(redis, f"login:{client_ip(request)}", limit=10, window=60)
+    await enforce_rate_limit(redis, account_key, limit=10, window=300)
     user = await AuthService(session).authenticate(payload.email, payload.password)
+    await clear_rate_limit(redis, account_key)
     await audit.record(
         session,
         action="user.login",
         actor_id=user.id,
         entity_type="user",
         entity_id=str(user.id),
-        ip=_client_ip(request),
+        ip=client_ip(request),
     )
     set_session_cookie(response, await create_session(redis, user.id))
     set_csrf_cookie(response, generate_csrf_token())
     return UserOut.model_validate(user)
 
 
-@router.post("/logout", dependencies=[Depends(csrf_protect)])
+@router.post("/logout")
 async def logout(
     request: Request,
     response: Response,
@@ -104,7 +127,7 @@ async def logout(
     token = request.cookies.get(session_cookie_name())
     if token:
         await revoke_session(redis, token)
-    await audit.record(session, action="user.logout", actor_id=user.id, ip=_client_ip(request))
+    await audit.record(session, action="user.logout", actor_id=user.id, ip=client_ip(request))
     clear_session_cookie(response)
     return {"status": "ok"}
 
@@ -114,10 +137,11 @@ async def me(user: CurrentUser) -> UserOut:
     return UserOut.model_validate(user)
 
 
-@router.post("/change-password", dependencies=[Depends(csrf_protect)])
+@router.post("/change-password")
 async def change_password(
     payload: ChangePasswordRequest,
     request: Request,
+    response: Response,
     session: SessionDep,
     redis: RedisDep,
     user: CurrentUser,
@@ -126,13 +150,31 @@ async def change_password(
     await AuthService(session).change_password(
         user.id, payload.current_password, payload.new_password
     )
+    # A password change is usually a response to "someone else may have this" — so
+    # every session minted with the OLD password has to die, including this one,
+    # which is then re-minted so the user is not logged out of the tab they are in.
+    #
+    # revoke_user_sessions is index-driven and therefore fail-open: a session minted
+    # before the per-user index existed, or lost to an eviction, is invisible to it.
+    # The presenting token is revoked explicitly as well, so the one session we can
+    # always see is guaranteed to die even when the index is incomplete.
+    revoked = await revoke_user_sessions(redis, user.id)
+    presenting = request.cookies.get(session_cookie_name())
+    if presenting:
+        await revoke_session(redis, presenting)
+    set_session_cookie(response, await create_session(redis, user.id))
+    set_csrf_cookie(response, generate_csrf_token())
     await audit.record(
-        session, action="user.change_password", actor_id=user.id, ip=_client_ip(request)
+        session,
+        action="user.change_password",
+        actor_id=user.id,
+        ip=client_ip(request),
+        payload={"sessions_revoked": revoked},
     )
     return {"status": "ok"}
 
 
-@router.post("/delete", dependencies=[Depends(csrf_protect)])
+@router.post("/delete")
 async def delete_account(
     payload: DeleteAccountRequest,
     request: Request,
@@ -145,10 +187,22 @@ async def delete_account(
     if not await svc.verify_current_password(user.id, payload.password):
         raise AuthenticationError("Password is incorrect.")
     await svc.deactivate(user.id)
-    await audit.record(session, action="user.delete", actor_id=user.id, ip=_client_ip(request))
-    token = request.cookies.get(session_cookie_name())
-    if token:
-        await revoke_session(redis, token)
+    # Deactivation already locks the account out via get_current_user, but leaving
+    # live session keys in Redis means they keep resolving until the 14-day TTL.
+    # Revoke the presenting token explicitly too: the index-driven sweep cannot see
+    # a session minted before the index existed, and dropping that unconditional
+    # revoke would be a regression against the behaviour this endpoint used to have.
+    revoked = await revoke_user_sessions(redis, user.id)
+    presenting = request.cookies.get(session_cookie_name())
+    if presenting:
+        await revoke_session(redis, presenting)
+    await audit.record(
+        session,
+        action="user.delete",
+        actor_id=user.id,
+        ip=client_ip(request),
+        payload={"sessions_revoked": revoked},
+    )
     clear_session_cookie(response)
     return {"status": "ok"}
 
@@ -161,7 +215,9 @@ async def password_reset(
     redis: RedisDep,
 ) -> dict[str, str]:
     """Start a reset. Always a generic 200 (no account enumeration); emails a link when real."""
-    await enforce_rate_limit(redis, f"pwreset:{_client_ip(request)}", limit=5, window=300)
+    await enforce_rate_limit(redis, f"pwreset:{client_ip(request)}", limit=5, window=300)
+    # Per-account too, so one address cannot be mail-bombed from a rotating IP pool.
+    await enforce_rate_limit(redis, account_bucket("pwreset", payload.email), limit=3, window=900)
     user = await AuthService(session).get_by_email(payload.email)
     if user is not None and user.is_active:
         token = await create_reset_token(redis, user.id)
@@ -178,11 +234,23 @@ async def password_reset(
 @router.post("/password-reset-confirm")
 async def password_reset_confirm(
     payload: PasswordResetConfirm,
+    request: Request,
     session: SessionDep,
     redis: RedisDep,
 ) -> dict[str, str]:
+    await enforce_rate_limit(redis, f"pwresetconfirm:{client_ip(request)}", limit=10, window=300)
     user_id = await consume_reset_token(redis, payload.token)
     if user_id is None:
         raise AuthenticationError("This reset link is invalid or has expired.")
     await AuthService(session).set_password(user_id, payload.new_password)
+    # The whole point of a reset is to evict whoever else is holding the account.
+    # No session is minted here: the user proves the new password by logging in.
+    revoked = await revoke_user_sessions(redis, user_id)
+    await audit.record(
+        session,
+        action="user.password_reset",
+        actor_id=user_id,
+        ip=client_ip(request),
+        payload={"sessions_revoked": revoked},
+    )
     return {"status": "ok"}

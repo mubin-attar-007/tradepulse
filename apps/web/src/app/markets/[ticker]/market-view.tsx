@@ -4,6 +4,8 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 import type { FaqItem } from "@/components/faq-jsonld";
+
+import { ChartAttribution } from "@/components/chart-attribution";
 import { DataBadge } from "@/components/data-badge";
 import { HypotheticalBanner } from "@/components/hypothetical-banner";
 import { PublicChart } from "@/components/public-chart";
@@ -29,7 +31,18 @@ const METRICS: [string, string][] = [
 ];
 const PCT = new Set(["total_return", "max_drawdown", "win_rate"]);
 
-function fmtMetric(key: string, value: number): string {
+/**
+ * A metric the server withheld arrives as `null`, and that is information, not a
+ * gap: an annualized figure is suppressed below a documented sample-size floor, and
+ * a ratio with no denominator (profit factor with no losing trade) is undefined
+ * rather than zero. Rendering "n/a" is the honest answer; coercing null to 0 would
+ * present "we could not measure this" as "this measured zero".
+ */
+function fmtMetric(key: string, value: number | null | undefined): string {
+  if (value === null || value === undefined) return "n/a";
+  // Never print "NaN"/"Infinity" on a crawlable page — an unrepresentable metric is
+  // honestly a dash, not a number a reader might take at face value.
+  if (!Number.isFinite(value)) return "—";
   if (PCT.has(key)) return `${(value * 100).toFixed(2)}%`;
   if (key === "num_trades") return String(value);
   return value.toFixed(2);
@@ -124,9 +137,16 @@ export function MarketView({
             <h2 className="text-sm font-medium text-muted-foreground">
               Price chart · {timeframe}
             </h2>
-            <span className="text-xs text-muted-foreground">Delayed OHLCV</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Delayed OHLCV</span>
+              <DataBadge kind="DELAYED" title="Polled historical bars — not a live feed." />
+            </div>
           </div>
-          <PublicChart slug={slug} timeframe={timeframe} />
+          <PublicChart
+            slug={slug}
+            timeframe={timeframe}
+            label={`${displayName} (${instrument.ticker})`}
+          />
         </section>
 
         {/* Real indicators (latest values). */}
@@ -158,9 +178,18 @@ export function MarketView({
           </section>
         ) : null}
 
-        {/* Reference backtest — HYPOTHETICAL, under the banner. */}
+        {/* Reference backtest — a HYPOTHETICAL research illustration, under the banner.
+            This block is the one on the page that could be mistaken for a trading signal
+            offered to a visitor, so it is framed three times over: what the strategy is,
+            that it was fixed in advance, and that nobody is being told to do anything. */}
         <section className="mt-10 space-y-3">
-          <h2 className="text-lg font-medium">Reference backtest</h2>
+          <h2 className="text-lg font-medium">Reference strategy illustration</h2>
+          <p className="text-sm text-muted-foreground">
+            One fixed, un-optimised SMA-crossover rule — chosen in advance and identical on every
+            ticker page — replayed over {instrument.ticker}&apos;s delayed historical bars. It
+            exists to show how the engine reports a result, not to suggest a position. It is not a
+            signal, not a recommendation, and not tailored to anyone.
+          </p>
           <HypotheticalBanner />
           {ref.available ? (
             <>
@@ -182,7 +211,9 @@ export function MarketView({
                   ? ` · ${ref.start.slice(0, 10)} → ${ref.end.slice(0, 10)}`
                   : ""}
                 . Reproducible: spec {ref.spec_hash.slice(0, 12)} on engine {ref.engine_version}.
-                Returns are net of modeled commission &amp; slippage. These are{" "}
+                Figures are the outcome of a historical simulation under the assumptions shown, net
+                of modeled commission &amp; slippage — hypothetical, and not predictive of future
+                performance. These are{" "}
                 <strong>per-run figures over a limited sample and are NOT annualized</strong>{" "}
                 (annualized metrics like CAGR/Sharpe/Sortino are omitted here — they are
                 meaningless over a short window).{" "}
@@ -216,8 +247,10 @@ export function MarketView({
         </section>
 
         <div className="mt-10 flex flex-wrap items-center gap-3">
+          {/* A research CTA, not a trading one: it invites the visitor to test their own
+              idea, never to act on the illustration above. */}
           <Link href="/login" className={cn(buttonVariants({ size: "lg" }), "gap-2")}>
-            Build a strategy <ArrowRight size={16} />
+            Test your own idea <ArrowRight size={16} />
           </Link>
           <Link
             href="/methodology"
@@ -234,7 +267,10 @@ export function MarketView({
             <div className="h-4 w-4 rounded gradient-brand" />
             {BRAND_NAME}
           </div>
-          <div>Delayed data. Hypothetical results. Not investment advice.</div>
+          <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:gap-4">
+            <ChartAttribution />
+            <span>Delayed data. Hypothetical results. Not investment advice.</span>
+          </div>
         </div>
       </footer>
     </div>

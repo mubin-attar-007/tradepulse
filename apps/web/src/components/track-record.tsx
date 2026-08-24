@@ -29,7 +29,15 @@ const METRICS: [string, string][] = [
 ];
 const PCT = new Set(["total_return", "max_drawdown", "win_rate"]);
 
-function fmtMetric(key: string, value: number): string {
+/**
+ * A metric the server withheld arrives as `null`, and that is information, not a
+ * gap: an annualized figure is suppressed below a documented sample-size floor, and
+ * a ratio with no denominator (profit factor with no losing trade) is undefined
+ * rather than zero. Rendering "n/a" is the honest answer; coercing null to 0 would
+ * present "we could not measure this" as "this measured zero".
+ */
+function fmtMetric(key: string, value: number | null | undefined): string {
+  if (value === null || value === undefined) return "n/a";
   if (PCT.has(key)) return `${(value * 100).toFixed(2)}%`;
   return value.toFixed(2);
 }
@@ -67,6 +75,17 @@ export async function TrackRecord() {
             {tr.total_bars.toLocaleString()}
           </span>{" "}
           delayed historical bars. Equal-weight, per-run average — not a portfolio, not compounded.
+        </p>
+        {/* Selection disclosure. Averaging over "all covered symbols" sounds bias-free and
+            is not: the universe is a small, fixed list of large caps and major crypto pairs
+            that still exist in 2026, and coverage additionally depends on which symbols an
+            operator happened to backfill enough history for. Saying so is the difference
+            between an illustration and a quietly survivorship-biased performance claim. */}
+        <p className="mt-3 text-sm text-muted-foreground">
+          Read the universe before you read the number: it is a small, hand-picked list of
+          currently-listed large caps and major crypto pairs, selected with hindsight, and a symbol
+          only counts once enough history has been backfilled for it. These averages are{" "}
+          <strong>not survivorship-free</strong> and are not a broad-market study.
         </p>
       </div>
 

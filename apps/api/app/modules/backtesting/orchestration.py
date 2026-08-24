@@ -57,10 +57,9 @@ class BacktestService:
             status="done",
         )
         try:
-            result = await run_backtest(
-                self.session, spec, start=start, end=end, config=config or ExecutionConfig()
-            )
-            backtest.result = result_to_dict(result)
+            execution = config or ExecutionConfig()
+            result = await run_backtest(self.session, spec, start=start, end=end, config=execution)
+            backtest.result = result_to_dict(result, config=execution)
         except (NotFoundError, BadRequestError) as exc:
             backtest.status = "failed"
             backtest.error = str(exc.detail)[:500]

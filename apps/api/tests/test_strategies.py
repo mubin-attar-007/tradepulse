@@ -10,6 +10,7 @@ from app.core.db import get_sessionmaker
 from app.modules.auth.models import User
 from app.modules.strategies.service import StrategyService
 from app.modules.strategies.spec import StrategySpec, example_composite_spec
+from tests.conftest import authenticate
 
 _MISSING_EXIT = {
     "name": "no exit",
@@ -69,9 +70,7 @@ async def test_owner_scoping() -> None:
 
 # --- endpoints ---
 async def _login(client: AsyncClient) -> None:
-    await client.post(
-        "/auth/register", json={"email": "trader@example.com", "password": "password123"}
-    )
+    await authenticate(client, "trader@example.com")
 
 
 async def test_strategies_require_auth(client: AsyncClient) -> None:

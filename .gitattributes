@@ -5,3 +5,13 @@ apps/web/src/lib/api/schema.ts   text eol=lf
 
 # Shell scripts that run on the server must always be LF.
 *.sh text eol=lf
+
+# Python is edited on Windows here; without this every touched file comes back
+# entirely rewritten with CRLF, which buries a three-line change in a 100-line
+# diff and destroys blame for the file.
+*.py text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf

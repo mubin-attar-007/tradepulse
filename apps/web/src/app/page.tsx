@@ -1,7 +1,9 @@
 import {
   ArrowRight,
   Boxes,
+  Fingerprint,
   FlaskConical,
+  Gauge,
   LineChart,
   ShieldCheck,
   Sparkles,
@@ -9,49 +11,56 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { ChartAttribution } from "@/components/chart-attribution";
 import { TrackRecord } from "@/components/track-record";
 import { buttonVariants } from "@/components/ui/button";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
+/**
+ * Landing copy is held to the same standard as the app: every line here has to be true
+ * of the code that ships. Anything the /methodology page lists under "what we
+ * deliberately do not claim" must never appear on this page in the present tense —
+ * that contradiction is the fastest way a research tool starts reading like a tout.
+ */
 const FEATURES = [
   {
     icon: FlaskConical,
-    title: "Honest backtesting",
-    body: "An event-driven engine that's structurally look-ahead-free and models real commission, slippage, and spread. Every result is reproducible.",
+    title: "Look-ahead-free by construction",
+    body: "Bars are replayed one at a time and orders fill at the next bar's open — never the signal bar's close. The engine cannot act on a price it would not have had.",
+  },
+  {
+    icon: Gauge,
+    title: "Costs modelled by default",
+    body: "Commission (2 bps per side) and adverse slippage (1 bps) hit every fill, and the API exposes no way to switch them off. Reported figures are net, with total commission shown beside them.",
+  },
+  {
+    icon: Fingerprint,
+    title: "Runs you can re-derive",
+    body: "Every simulation records a spec hash, an engine version, and a data fingerprint — so a figure you saw last month traces back to the exact inputs that produced it.",
   },
   {
     icon: Sparkles,
-    title: "AI strategy copilot",
-    body: "Describe a strategy in plain English and get a validated spec back — never auto-executed. Grounded explanations of every result.",
-  },
-  {
-    icon: LineChart,
-    title: "Live charting",
-    body: "TradingView-grade candles with real-time data over WebSockets, indicators, and a fast, fluid workspace.",
-  },
-  {
-    icon: Boxes,
-    title: "Strategy builder",
-    body: "One canonical spec across AI, code, and a visual builder. Mandatory exits, sizing, and enforced risk limits — by design.",
-  },
-  {
-    icon: Wallet,
-    title: "Paper trading",
-    body: "Deploy a strategy and watch it trade live against a virtual ledger using the exact same engine as your backtest.",
+    title: "Plain English to a validated spec",
+    body: "Describe an idea and the copilot drafts one canonical JSON spec. It has to pass schema validation before it can run, and nothing is auto-executed — the AI proposes, the engine decides.",
   },
   {
     icon: ShieldCheck,
-    title: "Risk-first & gated",
-    body: "Position caps, daily-loss halts, and a kill-switch are enforced — not decorative. Real-money trading stays gated behind hard controls.",
+    title: "Risk limits inside the loop",
+    body: "Position caps, a max-daily-loss halt, and consecutive-loss limits run inside the engine, not as a warning label. Every time one fires it is recorded on the result.",
+  },
+  {
+    icon: Wallet,
+    title: "Simulation, and a door that stays shut",
+    body: "Paper sessions run the same engine against delayed bars on a virtual ledger. The real-money seam refuses by construction: the controls it requires are not built, so it answers 403.",
   },
 ];
 
 const STATS = [
-  ["US equities + crypto", "Markets"],
-  ["Look-ahead-free", "Backtest engine"],
-  ["Sub-second", "Live data"],
-  ["AI-assisted", "Strategy authoring"],
+  ["US equities + crypto", "Markets covered"],
+  ["Look-ahead-free", "Simulation engine"],
+  ["Delayed, polled", "Market data"],
+  ["Spec-hashed", "Reproducible runs"],
 ];
 
 export default function LandingPage() {
@@ -94,43 +103,44 @@ export default function LandingPage() {
             {BRAND_TAGLINE}
           </div>
           <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-semibold leading-[1.1] tracking-tight md:text-6xl animate-fade-up">
-            Build, analyze &amp; automate
+            Test a trading idea
             <br />
-            <span className="gradient-text">trading strategies</span>
+            <span className="gradient-text">before you believe it</span>
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-balance text-muted-foreground md:text-lg animate-fade-up">
-            Institutional-grade analytics, an honest backtesting engine, and an AI copilot — for
-            US equities and crypto. The terminal that respects your edge.
+            A research workbench for US equities and crypto. The AI proposes and explains; a
+            deterministic engine validates, simulates, and enforces the risk boundaries — and every
+            figure you see is that engine&apos;s own output.
           </p>
           <div className="mt-8 flex items-center justify-center gap-3 animate-fade-up">
             <Link href="/login" className={cn(buttonVariants({ size: "lg" }), "gap-2")}>
               Start free <ArrowRight size={16} />
             </Link>
             <Link
-              href="/dashboard"
+              href="/methodology"
               className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
             >
-              Launch app
+              Read the methodology
             </Link>
           </div>
           <p className="mt-4 text-xs text-muted-foreground animate-fade-up">
-            Not investment advice · For research &amp; education
+            Simulation only · Not investment advice · For research &amp; education
           </p>
 
-          {/* The honest positioning is the pitch: no cherry-picked numbers. The only
-              performance figure on this page is the real, caveated reference backtest
-              rendered by <TrackRecord/> below — never a fabricated marketing stat. */}
+          {/* The honest positioning IS the pitch. The only performance figure on this page
+              is the real, caveated reference backtest rendered by <TrackRecord/> below —
+              never a fabricated marketing stat. */}
           <div className="mx-auto mt-14 max-w-xl animate-fade-up">
             <p className="text-sm text-muted-foreground">
-              No cherry-picked numbers here. The one performance figure below is our own reference
-              strategy run in the open — net of costs, per run. Then run a real backtest on your
-              own strategy and see the actual result.
+              The only performance figure on this page is our own fixed reference strategy, run in
+              the open over a disclosed universe — net of costs, per run, hypothetical. Then run a
+              simulation on your own idea and see what it actually did.
             </p>
             <Link
               href="/backtests"
               className={cn(buttonVariants({ variant: "outline", size: "sm" }), "mt-4 gap-2")}
             >
-              Run a real backtest <ArrowRight size={16} />
+              Run a historical simulation <ArrowRight size={16} />
             </Link>
           </div>
         </div>
@@ -143,8 +153,12 @@ export default function LandingPage() {
       {/* Features */}
       <section className="mx-auto max-w-6xl px-6 py-20">
         <h2 className="text-center text-2xl font-semibold tracking-tight md:text-3xl">
-          A premium quant workflow, end to end
+          Evidence, end to end
         </h2>
+        <p className="mx-auto mt-3 max-w-xl text-center text-sm text-muted-foreground">
+          Six things the platform actually does today — each one visible in the engine, none of
+          them a roadmap item written in the present tense.
+        </p>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
             <div
@@ -161,8 +175,39 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Authoring + charting, described exactly as they ship (no visual builder exists). */}
+      <section className="mx-auto max-w-6xl px-6">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-border bg-card p-6">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Boxes size={18} />
+            </div>
+            <h3 className="mt-4 font-medium">One canonical strategy spec</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Indicators, entry and exit rules, sizing, and risk limits live in a single versioned
+              JSON spec. Write it by hand in the editor or have the copilot draft it — the same
+              validator and the same engine run either way. There is no separate drag-and-drop
+              builder: one spec, one execution path, nothing hidden between them.
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-6">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <LineChart size={18} />
+            </div>
+            <h3 className="mt-4 font-medium">Charts with stated provenance</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Candles with SMA/EMA/RSI overlays and oscillator panes, computed causally by the same
+              indicator code the engine uses — warm-up windows left blank rather than back-filled.
+              Prices are polled, not streamed, and are labelled{" "}
+              <span className="font-medium text-foreground">DELAYED</span> with the time they were
+              last fetched, wherever they appear.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Stats */}
-      <section className="border-y border-border bg-card/40">
+      <section className="mt-20 border-y border-border bg-card/40">
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-px px-6 py-12 md:grid-cols-4">
           {STATS.map(([value, label]) => (
             <div key={label} className="text-center">
@@ -178,10 +223,11 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="mx-auto max-w-6xl px-6 py-24 text-center">
         <h2 className="mx-auto max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">
-          Trade with an edge you can <span className="gradient-text">actually trust</span>.
+          Find out what your idea <span className="gradient-text">actually did</span>.
         </h2>
         <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
-          Honest numbers, enforced risk, AI that explains instead of guesses.
+          A historical simulation under assumptions you can read — not a forecast and not a
+          promise. Results are hypothetical; past performance says nothing about the future.
         </p>
         <Link
           href="/login"
@@ -197,10 +243,11 @@ export default function LandingPage() {
             <div className="h-4 w-4 rounded gradient-brand" />
             {BRAND_NAME}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:gap-4">
             <Link href="/methodology" className="transition-colors hover:text-foreground">
               Methodology
             </Link>
+            <ChartAttribution />
             <span>Not investment advice. For research &amp; education.</span>
           </div>
         </div>
