@@ -1,3 +1,5 @@
+> **Archived (November 2026).** An earlier learning project: an event-driven backtester with a look-ahead canary test and a grounded AI copilot. The code stays public as a reference. It is no longer maintained, and its hosted demo may be offline. Current work: [mubin-attar.vercel.app](https://mubin-attar.vercel.app).
+
 <div align="center">
 
 # 📈 TradePulse
